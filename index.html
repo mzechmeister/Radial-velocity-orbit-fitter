@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RV Orbit Fitter</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💫</text></svg>">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+    <script src="https://raw.githack.com/mzechmeister/csvplotter/master/zoom_pan.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+        input[type=number]{ -moz-appearance:textfield; }
+        :root {
+            --bg:#f4f6fb; --bg2:#ffffff; --bg3:#e8edf5; --border:#c8d4e8;
+            --text:#1a1a2e; --text2:#555; --accent:#1a6fc4; --accent2:#0d4a8a;
+            --val:#0a7c3e; --val2:#1a6fc4; --cyan:#0077aa;
+            --input-bg:#ffffff;
+            --cm-bg:#ffffff; --cm-gutter:#e8edf5; --cm-gutter-fg:#999; --cm-cursor:#333;
+            --tab-active:#d0dff5; --tab-inactive:#e8edf5;
+            --legend-bg:rgba(255,255,255,0.85);
+            --sidebar-w:440px;
+            --scrollbar-w:15px;
+            --bar-h:38px;
+        }
+        [data-theme="dark"] {
+            --bg:#1a1a2e; --bg2:#16213e; --bg3:#0d1b2a; --border:#0f3460;
+            --text:#eee; --text2:#aaa; --accent:#a0c4ff; --accent2:#4cc9f0;
+            --val:#a8ff78; --val2:#4cc9f0; --cyan:#a8dadc;
+            --input-bg:#1e2d40;
+            --cm-bg:#0d1b2a; --cm-gutter:#0a1628; --cm-gutter-fg:#4a6080; --cm-cursor:#ffffff;
+            --tab-active:#0a1628; --tab-inactive:#0d1b2a;
+            --legend-bg:rgba(13,27,42,0.8);
+        }
+        body { font-family:Arial,sans-serif; background:var(--bg); color:var(--text); transition:background .3s,color .3s; }
+
+        /* ── fixed project bar ── */
+        .project-bar {
+            position:fixed; top:0; left:0; right:0; z-index:300;
+            display:flex; align-items:center; gap:6px;
+            padding:4px 12px; height:var(--bar-h);
+            background:var(--bg3); border-bottom:1px solid var(--border);
+            font-size:13px; transition:background .3s,border-color .3s;
+        }
+        .app-title { font-size:15px; font-weight:bold; color:var(--accent); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; }
+        .project-bar label { white-space:nowrap; flex:0 0 auto; color:var(--text2); }
+        #projectName { flex:1; min-width:60px; padding:3px 7px; font-size:13px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        #projectName:focus { outline:none; border-color:var(--accent2); }
+        .project-btns { display:flex; gap:5px; align-items:center; flex:0 0 auto; }
+        .project-spacer { flex:1; min-width:8px; }
+        .theme-btn { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:13px; color:var(--text2); cursor:pointer; transition:background .2s; }
+        .theme-btn:hover { background:var(--bg2); }
+
+        /* ── sidebar resize handle: replaces left border of sidebar ── */
+        #sidebarResizeHandle {
+            display:none;
+            position:fixed;
+            top:var(--bar-h); bottom:0;
+            left:calc(100vw - var(--sidebar-w) - 1px);
+            width:4px;
+            cursor:ew-resize;
+            z-index:203;
+            background:var(--border);
+            transition:background .2s;
+        }
+        #sidebarResizeHandle:hover,
+        #sidebarResizeHandle.dragging { background:var(--accent2); }
+        body.sidebar-mode #sidebarResizeHandle { display:block; }
+        /* sidebar has no left border — handle acts as the border */
+        body.sidebar-mode #paramPanel { border-left:none; }
+
+        /* ── scroll containers ── */
+        #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
+        body.sidebar-mode { overflow:hidden; height:100vh; }
+        body.sidebar-mode #leftScroll {
+            position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w);
+            overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px;
+        }
+        body.sidebar-mode #paramPanel {
+            position:fixed; right:0; top:var(--bar-h); bottom:0; width:var(--sidebar-w);
+            overflow-y:scroll; border-radius:0;
+            box-shadow:-4px 0 24px rgba(0,0,0,.35); z-index:200; margin-bottom:0;
+        }
+
+        .container { max-width:1400px; margin:0 auto; }
+        .top-row { display:flex; gap:20px; margin-bottom:20px; align-items:flex-start; }
+        .panel { background:var(--bg2); border-radius:10px; padding:15px; border:1px solid var(--border); transition:background .3s,border-color .3s; margin-bottom:20px; }
+        em { font-style:italic; }
+        .panel-header { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+        .panel-header h2 { color:var(--accent); font-size:16px; flex:0 0 auto; margin:0; }
+        .collapse-arrow { color:var(--accent); font-size:14px; flex:0 0 auto; transition:transform .2s; }
+        .collapse-arrow.open  { transform:rotate(0deg); }
+        .collapse-arrow.closed{ transform:rotate(-90deg); }
+        .panel-body { margin-top:12px; }
+        .panel-body.hidden { display:none; }
+        .data-panel { flex:1.4; min-width:0; overflow:hidden; }
+        .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
+        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--tab-inactive); color:var(--text2); cursor:pointer; font-size:13px; user-select:none; transition:background .2s,color .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
+        .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom:1px solid var(--tab-active); }
+        .ds-tab.drag-over { background:var(--accent2); opacity:.7; }
+        .ds-tab .tab-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+        .ds-tab .tab-rename-input { flex:1; min-width:0; width:80px; font-size:13px; font-weight:inherit; background:var(--input-bg); color:var(--text); border:1px solid var(--accent2); border-radius:3px; padding:0 4px; }
+        .ds-tab .tab-rename-input:focus { outline:none; }
+        .ds-tab .close-btn { font-size:13px; line-height:1; background:none; border:none; cursor:pointer; color:var(--text2); opacity:.55; padding:0; flex:0 0 auto; transition:opacity .15s; }
+        .ds-tab .close-btn:hover { opacity:1; color:#f72585; }
+        .ds-tab-add { padding:5px 12px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:none; color:var(--accent); cursor:pointer; font-size:17px; font-weight:bold; margin-right:3px; line-height:1; transition:background .2s; }
+        .ds-tab-add:hover { background:var(--tab-inactive); }
+        .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
+        .ds-pane { display:none; }
+        .ds-pane.active { display:block; }
+        .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text2); border-left:4px solid transparent; }
+        .ds-header label { white-space:nowrap; }
+        .ds-header input[type=number] { width:80px; padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+        .ds-header input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .ds-header select { padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+        .ds-header input[type=range] { width:70px; accent-color:var(--accent2); }
+        .data-stats-bar { margin-top:6px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+        .stat-item { display:flex; gap:5px; }
+        .stat-label { color:var(--accent); }
+        .stat-val { color:var(--cyan); }
+        .view-toggle { display:flex; align-items:center; gap:0; margin-bottom:4px; }
+        .view-toggle button { padding:3px 10px; font-size:12px; border:1px solid var(--border); background:var(--bg3); color:var(--text2); cursor:pointer; font-weight:normal; }
+        .view-toggle button:first-child { border-radius:4px 0 0 4px; }
+        .view-toggle button:nth-child(2) { border-radius:0 4px 4px 0; border-left:none; }
+        .view-toggle button.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+        .view-toggle label { margin-left:10px; font-size:12px; color:var(--text2); display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
+        .ds-preview { font-family:monospace; font-size:12px; background:var(--cm-bg); border:1px solid var(--border); border-radius:6px; padding:4px 0; height:150px; overflow-y:auto; }
+        .ds-preview-row { display:flex; align-items:center; padding:1px 6px; }
+        .ds-preview-row:hover { background:var(--bg3); }
+        .ds-preview-row.clipped { opacity:.35; text-decoration:line-through; }
+        .ds-preview-row.comment { color:var(--text2); opacity:.5; }
+        .ds-preview-cb { width:13px; height:13px; flex:0 0 auto; margin-right:6px; accent-color:#f72585; cursor:pointer; }
+        .ds-preview-time-wrap { display:inline-flex; justify-content:flex-end; margin-right:12px; }
+        .ds-preview-time-int { font-family:monospace; white-space:pre; text-align:right; color:var(--text2); }
+        .ds-preview-time-dec { font-family:monospace; white-space:pre; text-align:left; color:var(--text2); }
+        .CodeMirror { height:150px; font-family:monospace; font-size:13px; line-height:1.5; border:1px solid var(--border); border-radius:6px; background:var(--cm-bg)!important; color:var(--text)!important; min-width:320px; }
+        .CodeMirror-gutters { background:var(--cm-gutter)!important; border-right:1px solid var(--border)!important; }
+        .CodeMirror-linenumber { color:var(--cm-gutter-fg)!important; font-size:12px; }
+        .CodeMirror-cursor { border-left-color:var(--cm-cursor)!important; }
+        .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
+        input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        input[type=number]:focus,input[type=text]:focus,select:focus { outline:none; border-color:var(--accent2); }
+        input[type=checkbox] { accent-color:var(--accent2); width:15px; height:15px; cursor:pointer; }
+        select { padding:4px 8px; font-size:13px; }
+        .url-input { display:flex; align-items:center; gap:6px; width:100%; margin-top:6px; }
+        .url-input input[type=text] { flex:1; padding:4px 6px; font-size:13px; }
+
+        /* ── param panel ── */
+        .param-panel { flex:0 0 540px; position:relative; }
+        .param-list { display:flex; flex-direction:column; gap:6px; }
+        .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
+        .param-item label { font-size:13px; color:var(--text2); text-align:right; }
+        .param-item input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .param-item input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .param-fit-cb { width:15px; height:15px; cursor:pointer; accent-color:var(--accent2); justify-self:center; }
+        .param-fit-cb:not(:checked)+label { opacity:.35; }
+        .param-sigma { font-size:11px; color:var(--text2); font-family:monospace; white-space:nowrap; }
+        .derived-row { display:flex; align-items:center; gap:6px; }
+        .derived-row .d-label { flex:0 0 160px; font-size:13px; color:var(--text2); text-align:right; display:inline-block; line-height:1.5; }
+        .derived-row .d-val { flex:0 0 130px; min-width:0; font-size:15px; font-weight:bold; color:var(--val); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .derived-row .d-val.sm { font-size:12px; }
+        .planet-derived { display:grid; grid-template-columns:15px 160px auto; align-items:center; gap:6px; opacity:.8; }
+        .planet-derived span.d-label { font-size:12px; color:var(--text2); text-align:right; }
+        .planet-derived span.d-val { font-size:12px; color:var(--val); font-family:monospace; }
+        .section-sep { height:1px; background:var(--border); margin:3px 0; }
+        .stats-group { display:flex; flex-direction:column; gap:3px; }
+        .stats-group-title { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; opacity:.8; }
+        .fit-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .fit-table th { text-align:right; padding:2px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:11px; }
+        .fit-table th:first-child { text-align:left; }
+        .fit-table td { text-align:right; padding:2px 6px; color:var(--cyan); font-family:monospace; }
+        .fit-table td:first-child { text-align:left; color:var(--text2); font-family:Arial,sans-serif; }
+        .fit-table tr.total-row td { color:var(--val2); border-top:1px solid var(--border); font-weight:bold; }
+        .fit-table tr:hover td { background:var(--bg2); }
+
+        /* ── planet tab bar ── */
+        .planet-tab-bar { display:flex; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; margin-bottom:0; }
+        .planet-tab-bar::-webkit-scrollbar { height:3px; }
+        .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+        .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--tab-inactive); color:var(--text2); cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; }
+        .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
+        #ptab_all { position:sticky; left:0; background:var(--bg2); z-index:2; }
+        #ptab_all.active { background:var(--bg3); }
+        .planet-tab-add { padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--bg2); color:var(--accent); cursor:pointer; font-size:16px; line-height:1; transition:background .15s; flex-shrink:0; position:sticky; right:0; z-index:2; }
+        .planet-tab-add:hover { background:var(--bg3); }
+        .planet-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--bg3); padding:8px; }
+        .planet-block { display:none; margin-bottom:6px; }
+        .planet-block.active { display:block; }
+        .planet-block.inactive { opacity:.45; }
+        .planet-header { display:flex; align-items:center; gap:6px; user-select:none; margin-bottom:8px; }
+        .planet-name-input { font-size:13px; font-weight:bold; background:none; border:none; border-bottom:1px solid transparent; color:inherit; width:100px; cursor:text; outline:none; padding:0; }
+        .planet-name-input:focus { border-bottom-color:var(--accent2); background:var(--input-bg); }
+        .planet-body { display:flex; flex-direction:column; gap:6px; }
+        .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
+        .planet-ctrl:hover { opacity:1; }
+        .planet-ctrl.del:hover { color:#f72585; }
+        .gamma-row { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; border-left:3px solid transparent; padding-left:5px; }
+        .gamma-row label { font-size:13px; color:var(--text2); text-align:right; }
+        .gamma-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .gamma-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .gamma-sigma { font-size:11px; color:var(--text2); font-family:monospace; }
+        .bjd0-row,.starmass-row,.gamma-ref-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
+        .bjd0-row { grid-template-columns:160px 90px auto auto; }
+        .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
+        .gamma-ref-row { grid-template-columns:160px 90px auto auto; border:1px solid var(--border); border-radius:6px; padding:6px 8px; background:transparent; }
+        .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { font-size:13px; color:var(--text2); text-align:right; }
+        .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .bjd0-row input[type=number]:focus,.starmass-row input[type=number]:focus,.gamma-ref-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .unit-lbl { font-size:12px; color:var(--text2); white-space:nowrap; text-align:right; }
+        .starmass-row select,.gamma-ref-row select { font-size:12px; padding:2px 4px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+        .param-label { font-size:13px; color:var(--text2); text-align:right; display:inline-block; line-height:1.5; }
+        .fit-algo-row { display:flex; align-items:center; gap:8px; }
+        .fit-algo-row label { flex:0 0 160px; font-size:13px; color:var(--text2); text-align:right; }
+        .fit-algo-row select { flex:0 0 130px; }
+        .btn-row { display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap; }
+        .btn-row-spacer { flex:1; }
+        button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold; transition:background .2s,filter .2s; }
+        button:not(.theme-btn):not(.view-toggle button):hover { filter:brightness(.88); }
+        .btn-fit { background:#4cc9f0; color:#000; }
+        .btn-fit-top { background:#4cc9f0; color:#000; padding:3px 10px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; transition:background .2s,filter .2s; flex:0 0 auto; min-width:64px; text-align:center; }
+        .btn-fit-top:hover { filter:brightness(.88); }
+        @keyframes fitbtn { 0%{content:'⏳';} 50%,100%{content:'⌛';} }
+        .btn-fit:disabled,.btn-fit-top:disabled { opacity:1; filter:none; cursor:wait; }
+        .btn-fit:disabled span,.btn-fit-top:disabled span { display:none; }
+        .btn-fit:disabled::before { content:'⏳ Fitting…'; animation:fitbtn 1s step-start infinite; }
+        .btn-fit-top:disabled::before { content:'⏳ Fitting…'; animation:fitbtn 1s step-start infinite; }
+        .btn-undo { background:#888; color:#fff; padding:8px 12px; }
+        .btn-undo:disabled { opacity:.35; cursor:not-allowed; filter:none; }
+        .btn-new    { background:#e9c46a; color:#000; }
+        .btn-sample { background:#7209b7; color:#fff; }
+        .btn-auto   { background:#3a86ff; color:#fff; }
+        .btn-load   { background:#06d6a0; color:#000; }
+        .btn-url    { background:#fb8500; color:#000; }
+        .btn-save   { background:#6a4c93; color:#fff; padding:6px 12px; font-size:12px; }
+        .btn-saveas { background:#4a3570; color:#fff; padding:6px 12px; font-size:12px; }
+        .btn-open   { background:#2d6a4f; color:#fff; padding:6px 12px; font-size:12px; }
+        .btn-gls-run{ background:#e63946; color:#fff; padding:6px 14px; font-size:12px; }
+        .btn-view   { background:none; border:1px solid var(--border); border-radius:5px; padding:4px 8px; font-size:12px; color:var(--text2); cursor:pointer; }
+        .btn-view:hover { background:var(--bg3); }
+        .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+        /* add-panel buttons row */
+        .add-panel-row { display:flex; gap:8px; margin-bottom:20px; }
+        .btn-add-panel { background:none; border:1px dashed var(--border); border-radius:6px; color:var(--accent2); cursor:pointer; font-size:13px; padding:6px 14px; transition:background .2s; flex:1; }
+        .btn-add-panel:hover { background:var(--bg3); }
+        .sidebar-close { position:absolute; top:8px; right:8px; background:none; border:1px solid var(--border); border-radius:5px; padding:2px 8px; font-size:12px; color:var(--text2); cursor:pointer; z-index:10; }
+        .sidebar-close:hover { background:var(--bg3); }
+        body:not(.sidebar-mode) .sidebar-close { display:none; }
+
+        /* ── planet table ── */
+        #planetTableWrap { overflow-x:auto; }
+        .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(110px,1fr)); gap:2px 3px; align-items:start; font-size:12px; min-width:0; }
+        .pt-corner {}
+        .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
+        .pt-head input.planet-name-input { font-size:12px; width:65px; }
+        .pt-label { font-size:11px; color:var(--text2); text-align:right; padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
+        .pt-label.sep { border-top:1px solid var(--border); padding-top:5px; margin-top:3px; }
+        .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
+        .pt-cell-top { display:flex; align-items:center; gap:3px; }
+        .pt-cell-top input[type=checkbox] { width:12px; height:12px; flex:0 0 auto; accent-color:var(--accent2); cursor:pointer; margin:0; }
+        .pt-cell input[type=number] { flex:1; min-width:0; padding:2px 3px; font-size:12px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:3px; }
+        .pt-cell input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .pt-cell .param-sigma { font-size:10px; color:var(--text2); text-align:right; min-height:12px; padding-left:16px; }
+        .pt-derived { font-size:11px; color:var(--val); font-family:monospace; padding:1px 3px; align-self:center; }
+        .planet-view-bar { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:12px; }
+        #planetTabView, #planetTableView { min-height:120px; }
+        .inset-box { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:6px 8px; }
+
+        /* ── generic panel slot (plot or gls) ── */
+        .panel-slot { padding:10px; }
+        .panel-slot-header {
+            display:flex; align-items:center; gap:8px;
+            user-select:none; margin-bottom:0; cursor:grab;
+        }
+        .panel-slot-header:active { cursor:grabbing; }
+        .panel-slot-header h2 { color:var(--accent); font-size:16px; flex:0 0 auto; margin:0; pointer-events:none; }
+        .panel-slot-title { display:flex; align-items:center; gap:8px; flex:1; pointer-events:none; }
+        .panel-slot-close { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:16px; padding:0 4px; line-height:1; transition:opacity .15s; flex:0 0 auto; pointer-events:all; }
+        .panel-slot-close:hover { opacity:1; color:#f72585; filter:none; }
+        .panel-slot.drag-over { border-top:3px solid var(--accent2); }
+        /* plot options */
+        .plot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
+        .plot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
+        .check-item { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); cursor:pointer; }
+        .plot-rv  { width:100%; height:340px; }
+        .plot-res { width:100%; height:160px; }
+        .plot-divider { height:1px; background:var(--border); margin:3px 0; }
+        /* gls slot options */
+        .gls-slot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
+        .gls-slot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
+        .gls-slot-options input[type=number] { width:80px; padding:3px 6px; font-size:13px; }
+        .gls-subtract-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px; color:var(--text2); margin-bottom:8px; min-height:24px; }
+        .gls-planet-cb { display:inline-flex; align-items:center; gap:4px; cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid transparent; transition:background .15s; }
+        .gls-planet-cb:hover { background:var(--bg3); }
+        .gls-planet-cb input { accent-color:var(--accent2); width:13px; height:13px; }
+        .gls-planet-cb span { font-size:12px; }
+        .gls-plot-wrapper { position:relative; width:100%; }
+        .gls-peak-info { font-size:12px; color:var(--cyan); margin-top:6px; min-height:18px; }
+
+        #statusMsg { margin-top:10px; padding:8px 12px; border-radius:6px; font-size:13px; display:none; }
+        .msg-ok  { background:#1b4332; color:#52b788; display:block!important; }
+        .msg-err { background:#6b1a1a; color:#ff6b6b; display:block!important; }
+        .global-unit-sel { font-size:12px; padding:2px 6px; border-radius:4px; background:var(--input-bg); color:var(--accent); border:1px solid var(--border); cursor:pointer; }
+        .global-unit-sel:focus { outline:none; border-color:var(--accent2); }
+    </style>
+</head>
+<body data-theme="dark">
+
+<!-- sidebar resize handle (fixed, outside panel, replaces left border) -->
+<div id="sidebarResizeHandle"></div>
+
+<!-- fixed project bar -->
+<div class="project-bar" id="projectBar">
+    <span class="app-title">💫 RV Fitter</span>
+    <button class="btn-new"  id="btnNew"  style="padding:3px 8px;font-size:12px;">🆕</button>
+    <button class="btn-open" id="btnOpen" style="padding:3px 8px;font-size:12px;">📂</button>
+    <input type="file" id="projectFileInput" accept=".rvproj,.json" style="display:none;">
+    <label for="projectName" style="font-size:12px;color:var(--text2);">📁</label>
+    <input type="text" id="projectName" value="untitled" placeholder="project name">
+    <div class="project-btns">
+        <button class="btn-save"   id="btnSave"  >💾 Save</button>
+        <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
+        <button class="btn-view"   id="btnSidebar">⊳ Sidebar</button>
+        <button class="theme-btn"  id="btnTheme"  >🌓</button>
+    </div>
+    <div class="project-spacer"></div>
+    <button class="btn-fit-top" id="btnFitTop"><span>▶ Fit</span></button>
+</div>
+
+<div id="leftScroll">
+<div class="container" id="mainContainer">
+    <div class="top-row" id="topRow">
+        <div class="panel data-panel">
+            <div class="panel-header" id="dataHeader">
+                <span class="collapse-arrow open" id="dataArrow">▼</span>
+                <h2>📂 Data</h2>
+            </div>
+            <div class="panel-body" id="dataBody">
+                <div class="ds-tabs" id="dsTabs"></div>
+                <div class="ds-tab-content"><div id="dsPanes"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- panel slots container (plot + gls panels, all draggable) -->
+    <div id="panelSlotsContainer"></div>
+
+    <!-- add panel buttons -->
+    <div class="add-panel-row">
+        <button class="btn-add-panel" id="btnAddPlot">📈 Add Plot</button>
+        <button class="btn-add-panel" id="btnAddGLS" >🔭 Add GLS</button>
+    </div>
+</div>
+</div>
+
+<!-- param panel -->
+<div class="panel param-panel" id="paramPanel">
+    <button class="sidebar-close" id="btnSidebarClose">⊲ Close</button>
+    <div class="panel-header" id="paramHeader">
+        <span class="collapse-arrow open" id="paramArrow">▼</span>
+        <h2>⚙️ Parameters</h2>
+    </div>
+    <div class="panel-body" id="paramBody">
+        <div class="param-list">
+            <div class="bjd0-row">
+                <span class="param-label">BJD0 [days]</span>
+                <input type="number" id="globalBJD0" value="0" step="1">
+                <span class="unit-lbl">RV unit</span>
+                <select class="global-unit-sel" id="globalUnit">
+                    <option value="m/s">m/s</option>
+                    <option value="km/s">km/s</option>
+                </select>
+            </div>
+            <div class="starmass-row">
+                <label><em>M</em>★ [<em>M</em>☉]</label>
+                <input type="number" id="starMass" value="1.0" step="0.01" min="0.01">
+                <span class="unit-lbl" style="text-align:center;">±</span>
+                <input type="number" id="starMassSig" value="0.0" step="0.01" min="0">
+                <span class="unit-lbl"><em>m</em> unit</span>
+                <select id="msiniUnit">
+                    <option value="Mjup">M♃</option>
+                    <option value="Mear">M⊕</option>
+                    <option value="Msun">M☉</option>
+                </select>
+            </div>
+            <div class="planet-view-bar">
+                <span style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;opacity:.8;">Planets</span>
+                <button class="btn-view" id="btnPlanetViewTab">≡ Tabs</button>
+                <button class="btn-view active" id="btnPlanetViewTable">⊞ Table</button>
+            </div>
+            <div id="planetTabView" style="display:none;">
+                <div class="planet-tab-bar" id="planetTabBar"></div>
+                <div class="planet-tab-content"><div id="planetBlocks"></div></div>
+            </div>
+            <div id="planetTableView">
+                <div id="planetTableWrap"><div class="planet-table" id="planetTable"></div></div>
+            </div>
+            <div id="gammaRows"></div>
+            <div class="gamma-ref-row">
+                <span class="param-label" title="Reference γ for orbit curve (not fitted)."><em>γ</em>&nbsp;– reference</span>
+                <input type="number" id="gammaRefVal" value="0" step="1">
+                <span class="unit-lbl">source</span>
+                <select id="gammaRefSrc"><option value="custom">custom</option></select>
+            </div>
+            <div class="section-sep"></div>
+            <div class="stats-group inset-box">
+                <div class="stats-group-title">Fit quality</div>
+                <div id="fitStatsTable"></div>
+            </div>
+            <div class="stats-group inset-box" style="opacity:.45;">
+                <div class="stats-group-title">Debug</div>
+                <div class="derived-row">
+                    <span class="d-label">rvModelP calls</span>
+                    <span class="d-val sm" id="rvModelCallCount" style="color:var(--text2);font-size:12px;">0</span>
+                </div>
+            </div>
+            <div class="section-sep"></div>
+            <div class="fit-algo-row">
+                <label for="fitAlgo">Fit algorithm</label>
+                <select id="fitAlgo">
+                    <option value="lm" selected>Levenberg-Marquardt</option>
+                    <option value="nelder-mead">Nelder-Mead</option>
+                    <option value="diff-evol">Differential Evolution</option>
+                </select>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn-undo" id="undoBtn" disabled>↺ Undo</button>
+            <button class="btn-auto" id="btnAutoGuess">Auto Guess</button>
+            <div class="btn-row-spacer"></div>
+            <button class="btn-fit" id="btnFit"><span>▶ Fit</span></button>
+        </div>
+        <div id="statusMsg"></div>
+    </div>
+</div>
+
+<script>
+'use strict';
+// ── Constants ─────────────────────────────────────────────────────────────────
+const MSUN=1.989e30,MJUP=1.898e27,MEAR=5.972e24,AU=1.496e11,G=6.674e-11,DAY=86400;
+const PALETTE       =['#4cc9f0','#ff9f1c','#a0ff78','#f72585','#b5838d','#80ffdb'];
+const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down','cross','x','star'];
+const PLANET_COLORS =['#f72585','#a0ff78','#ffbe0b','#80ffdb','#b5838d','#ff9f1c'];
+const PLANET_LETTERS='bcdefghijklmnopqrstuvwxyz';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let planets=[],nextPlanetId=1,activePlanetPid=null;
+let datasets=[],activeId=null,nextId=1,lastSavedFilename=null;
+let rvModelCallCount=0,undoSnapshot=null;
+let _lastSigmasFull=null;
+let dragDsPid=null;
+const glsLineStates={};   // sid → {pid → {active}}
+let glsDragStates={};     // sid → drag state
+let _planetView='table';
+
+// ── Panel slots (unified: type 'plot' or 'gls') ────────────────────────────────
+let panels=[],nextPanelId=1;
+let _dragPanelSid=null;
+
+// ── DOM helpers ───────────────────────────────────────────────────────────────
+const el        =id=>document.getElementById(id);
+const getNumVal =(id,fb=0)=>parseFloat(el(id)?.value)||fb;
+const getChecked=(id,fb=true)=>el(id)?el(id).checked:fb;
+function setNumVal(id,v,d=4){ const e=el(id); if(e) e.value=isFinite(v)?v.toFixed(d):''; }
+function makeEl(tag,props={},children=[]){
+    const e=document.createElement(tag);
+    Object.entries(props).forEach(([k,v])=>{
+        if(k==='style'&&typeof v==='object') Object.assign(e.style,v);
+        else if(k==='class') e.className=v;
+        else if(k==='text')  e.textContent=v;
+        else if(k==='html')  e.innerHTML=v;
+        else e[k]=v;
+    });
+    children.forEach(c=>c&&e.appendChild(c));
+    return e;
+}
+
+// ── Math helpers ──────────────────────────────────────────────────────────────
+function mean(arr){ if(!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function std(arr){ if(!arr.length) return 0; const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length); }
+function median(arr){ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+
+// ── Number formatting ─────────────────────────────────────────────────────────
+function sigDec(v){ if(!isFinite(v)||v===0) return 2; return Math.max(0,2-Math.floor(Math.log10(Math.abs(v)))); }
+function fmtSig3(v){ if(!isFinite(v)) return '—'; return v.toFixed(sigDec(v)); }
+function fmtRVPair(rv,err){
+    const dec=isFinite(err)&&err>0?sigDec(err):sigDec(rv);
+    return{rvStr:isFinite(rv)?rv.toFixed(dec):'—',errStr:isFinite(err)&&err>0?err.toFixed(dec):''};
+}
+
+// ── Unit helpers ──────────────────────────────────────────────────────────────
+const toMs  =(v,u)=>u==='km/s'?v*1e3:v;
+const fromMs=(v,u)=>u==='km/s'?v/1e3:v;
+function getKUnit(){ return el('globalUnit')?.value||'m/s'; }
+function getDsUnit(ds){ return el(`rvUnit_${ds.id}`)?.value||ds.rvUnit||'m/s'; }
+
+// ── JD → ISO ─────────────────────────────────────────────────────────────────
+function jdToIso(jd){ if(!isFinite(jd)||jd<1) return '—'; return new Date((jd-2440587.5)*86400000).toISOString().slice(0,19).replace('T',' '); }
+
+// ── t_ω label ─────────────────────────────────────────────────────────────────
+function tOmegaLabel(){ const b=getGlobalBJD0()?'− BJD0 ':''; return `<em>t</em><sub><em>ω</em></sub> ${b}[days]`; }
+function updateT0Labels(){ planets.forEach(pl=>{ const inp=el(`pT0_${pl.pid}`); if(!inp) return; const lbl=inp.closest('.param-item')?.querySelector('label'); if(lbl) lbl.innerHTML=tOmegaLabel(); }); }
+
+// ── x-axis label ──────────────────────────────────────────────────────────────
+function xAxisLabel(slot){
+    const bjd0=getGlobalBJD0();
+    if(slot.foldPid!==null){ const pl=planets.find(p=>p.pid===slot.foldPid); return `Phase [days]  (${pl?.name||''})`; }
+    if(slot.showAsDate) return 'Date (UTC)';
+    if(bjd0) return `BJD − ${bjd0} [days]`;
+    return 'Time [days]';
+}
+
+// ── Plot base ─────────────────────────────────────────────────────────────────
+function makePlotBase(){
+    const C=plotColours(),fontCol=isDark()?'#eee':'#1a1a2e';
+    const minor={ticks:'inside',ticklen:3,tickcolor:C.grid};
+    const axBase={gridcolor:C.grid,zerolinecolor:C.zero,exponentformat:'none',color:fontCol,ticks:'inside',mirror:'ticks',minor};
+    const base={paper_bgcolor:C.paper,plot_bgcolor:C.bg,font:{color:fontCol,size:13}};
+    return{C,fontCol,axBase,base};
+}
+
+// ── Planet helpers ────────────────────────────────────────────────────────────
+function defaultPlanetName(i){ return 'Planet '+(PLANET_LETTERS[i]||String.fromCharCode(98+i)); }
+function planetColor(i){ return PLANET_COLORS[i%PLANET_COLORS.length]; }
+function planetIndex(pid){ return planets.findIndex(p=>p.pid===pid); }
+
+// ── Scrollbar + sidebar ───────────────────────────────────────────────────────
+function updateScrollbarWidth(){ const w=window.innerWidth-document.documentElement.clientWidth; document.documentElement.style.setProperty('--scrollbar-w',(w||15)+'px'); }
+function getSidebarWidth(){ return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'))||440; }
+
+function initSidebarResize(){
+    const handle=el('sidebarResizeHandle');
+    let startX,startW;
+    function onDrag(e){
+        const newW=Math.max(280,Math.min(780,startW+(startX-e.clientX)));
+        document.documentElement.style.setProperty('--sidebar-w',newW+'px');
+        clearTimeout(onDrag._t);
+        onDrag._t=setTimeout(()=>resizeAllPlots(),80);
+    }
+    function onDragEnd(){
+        handle.classList.remove('dragging');
+        document.removeEventListener('mousemove',onDrag);
+        document.removeEventListener('mouseup',onDragEnd);
+        resizeAllPlots();
+    }
+    handle.addEventListener('mousedown',e=>{
+        if(!document.body.classList.contains('sidebar-mode')) return;
+        e.preventDefault(); startX=e.clientX; startW=getSidebarWidth();
+        handle.classList.add('dragging');
+        document.addEventListener('mousemove',onDrag);
+        document.addEventListener('mouseup',onDragEnd);
+    });
+    handle.addEventListener('touchstart',e=>{ const t=e.touches[0]; startX=t.clientX; startW=getSidebarWidth(); },{passive:true});
+    handle.addEventListener('touchmove',e=>{ const t=e.touches[0]; const nw=Math.max(280,Math.min(780,startW+(startX-t.clientX))); document.documentElement.style.setProperty('--sidebar-w',nw+'px'); },{passive:true});
+}
+function resizeAllPlots(){
+    panels.forEach(p=>{
+        if(p.type==='plot'){ Plotly.Plots.resize(`plotRV_${p.sid}`); if(p.showRes) Plotly.Plots.resize(`plotRes_${p.sid}`); }
+        else if(p.type==='gls'){ Plotly.Plots.resize(`plotGLS_${p.sid}`); }
+    });
+    panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+}
+
+// ── Read/write planet DOM ─────────────────────────────────────────────────────
+function readPlanetDOM(pl){
+    const KU=getKUnit();
+    pl.name=el(`pName_${pl.pid}`)?.value||pl.name;
+    pl.P=getNumVal(`pP_${pl.pid}`,10); pl.K_ms=toMs(getNumVal(`pK_${pl.pid}`),KU);
+    pl.e=getNumVal(`pE_${pl.pid}`); pl.omega_deg=getNumVal(`pOmega_${pl.pid}`);
+    pl.t0=getNumVal(`pT0_${pl.pid}`);
+    ['fitP','fitK','fitE','fitOmega','fitT0'].forEach(k=>pl[k]=getChecked(`${k}_${pl.pid}`));
+    pl.active=getChecked(`pActive_${pl.pid}`);
+}
+function readAllPlanetDOM(){ planets.forEach(readPlanetDOM); }
+function writePlanetDOM(pl){
+    if(!pl?.pid) return;
+    const KU=getKUnit();
+    const nameEl=el(`pName_${pl.pid}`); if(nameEl) nameEl.value=pl.name;
+    setNumVal(`pP_${pl.pid}`,pl.P,6); setNumVal(`pK_${pl.pid}`,fromMs(pl.K_ms||0,KU),4);
+    setNumVal(`pE_${pl.pid}`,pl.e,6); setNumVal(`pOmega_${pl.pid}`,pl.omega_deg,2);
+    setNumVal(`pT0_${pl.pid}`,pl.t0,4);
+    const map={fitP:'fitP',fitK:'fitK',fitE:'fitE',fitOmega:'fitOmega',fitT0:'fitT0',active:'pActive'};
+    Object.entries(map).forEach(([key,pfx])=>{ const cb=el(`${pfx}_${pl.pid}`); if(cb&&pl[key]!=null) cb.checked=pl[key]; });
+}
+
+// ── Project ───────────────────────────────────────────────────────────────────
+function getProjectName(){ return el('projectName').value.trim()||'untitled'; }
+function updateWindowTitle(){ document.title=`${getProjectName()} – RV Fitter`; }
+
+// ── Session ───────────────────────────────────────────────────────────────────
+function saveToSession(){ try{ sessionStorage.setItem('rvfitter_project',JSON.stringify(buildProjectJSON())); }catch(e){} }
+function restoreFromSession(){ const raw=sessionStorage.getItem('rvfitter_project'); if(!raw) return false; try{ const proj=JSON.parse(raw); if(!proj.datasets) return false; loadProjectFromObj(proj); return true; }catch(e){ return false; } }
+
+// ── BJD0 ─────────────────────────────────────────────────────────────────────
+function getGlobalBJD0(){ return getNumVal('globalBJD0'); }
+function getDsT0Ref(ds){ return getNumVal(`t0ref_${ds.id}`); }
+
+// ── Fold selects ──────────────────────────────────────────────────────────────
+function rebuildFoldSelects(){
+    panels.filter(p=>p.type==='plot').forEach(slot=>{
+        const sel=el(`foldSelect_${slot.sid}`); if(!sel) return;
+        const prev=String(slot.foldPid??'none');
+        sel.innerHTML='<option value="none">Time series</option>';
+        planets.filter(pl=>pl.active!==false).forEach(pl=>sel.appendChild(makeEl('option',{value:String(pl.pid),text:pl.name})));
+        const valid=[...sel.options].map(o=>o.value);
+        sel.value=valid.includes(prev)?prev:'none';
+        slot.foldPid=sel.value==='none'?null:parseInt(sel.value);
+    });
+}
+
+// ── GLS subtract rows ─────────────────────────────────────────────────────────
+function rebuildGLSSubtractRows(){
+    panels.filter(p=>p.type==='gls').forEach(slot=>{
+        const row=el(`glsSubRow_${slot.sid}`); if(!row) return;
+        row.innerHTML='';
+        const active=planets.filter(pl=>pl.active!==false);
+        if(!active.length){ row.style.display='none'; return; }
+        row.style.display='flex';
+        row.appendChild(makeEl('span',{html:'<em>RV</em>'}));
+        active.forEach(pl=>{
+            const col=planetColor(planetIndex(pl.pid));
+            row.appendChild(makeEl('span',{text:' − ',style:{color:'var(--text2)',opacity:'.5'}}));
+            const cb=makeEl('input',{type:'checkbox',id:`glsSub_${slot.sid}_${pl.pid}`});
+            if(!slot.glsSubtract) slot.glsSubtract={};
+            cb.checked=slot.glsSubtract[pl.pid]!==false;
+            cb.addEventListener('change',()=>{ slot.glsSubtract[pl.pid]=cb.checked; updateGLSSlot(slot.sid); });
+            row.appendChild(makeEl('label',{class:'gls-planet-cb',style:{borderColor:col+'55'}},[cb,makeEl('span',{text:pl.name,style:{color:col}})]));
+        });
+    });
+}
+
+// ── GLS overlay per slot ──────────────────────────────────────────────────────
+function glsLayoutOf(sid){ return el(`plotGLS_${sid}`)?._fullLayout||null; }
+function periodToPixelX(sid,P){
+    const L=glsLayoutOf(sid); if(!L) return null;
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return null;
+    const xa=L.xaxis,xMode=slot.xAxis||'logperiod';
+    try{ const dataVal=xMode==='freq'?1/P:P; const axVal=xa.type==='log'?Math.log10(dataVal):dataVal; return xa.l2p(axVal)+xa._offset; }catch(e){ return null; }
+}
+function pixelXToPeriod(sid,px){
+    const L=glsLayoutOf(sid); if(!L) return null;
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return null;
+    const xa=L.xaxis,xMode=slot.xAxis||'logperiod';
+    try{ const axVal=xa.p2l(px-xa._offset); const dataVal=xa.type==='log'?Math.pow(10,axVal):axVal; return xMode==='freq'?1/dataVal:dataVal; }catch(e){ return null; }
+}
+function glsYTop(sid){ return glsLayoutOf(sid)?.yaxis._offset||0; }
+function glsYH(sid)  { return glsLayoutOf(sid)?.yaxis._length||280; }
+
+function buildGLSOverlayWhenReady(sid,attempts=0){
+    const L=glsLayoutOf(sid);
+    if((!L||!L.xaxis._offset)&&attempts<20){ setTimeout(()=>buildGLSOverlayWhenReady(sid,attempts+1),30); return; }
+    buildGLSOverlay(sid);
+}
+function buildGLSOverlay(sid){
+    const svg=el(`glsOverlay_${sid}`); if(!svg) return;
+    svg.innerHTML='';
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    if(!slot.showPeriod){ svg.style.display='none'; return; }
+    svg.style.display='';
+    const L=glsLayoutOf(sid); if(!L) return;
+    const pMin=slot.pMin||1,pMax=slot.pMax||1000;
+    const yTop=glsYTop(sid),yH=glsYH(sid);
+    if(!glsLineStates[sid]) glsLineStates[sid]={};
+    planets.filter(pl=>pl.active!==false).forEach(pl=>{
+        const fitP=getNumVal(`pP_${pl.pid}`); if(fitP<pMin||fitP>pMax) return;
+        const col=planetColor(planetIndex(pl.pid));
+        if(!glsLineStates[sid][pl.pid]) glsLineStates[sid][pl.pid]={active:false};
+        const state=glsLineStates[sid][pl.pid];
+        const px=periodToPixelX(sid,fitP); if(px===null||!isFinite(px)) return;
+        function svgLine(id,stroke,sw,dash){
+            const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+            if(id) l.id=id; l.setAttribute('x1',px); l.setAttribute('x2',px);
+            l.setAttribute('y1',yTop); l.setAttribute('y2',yTop+yH);
+            l.setAttribute('stroke',stroke); l.setAttribute('stroke-width',sw);
+            if(dash) l.setAttribute('stroke-dasharray',dash); return l;
+        }
+        const vis=svgLine(`glsVis_${sid}_${pl.pid}`,col,state.active?'2.5':'1.5',state.active?null:'6,4');
+        vis.setAttribute('opacity',state.active?'1':'0.75'); vis.style.pointerEvents='none';
+        svg.appendChild(vis);
+        const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+        txt.setAttribute('x',px+4); txt.setAttribute('y',yTop+14);
+        txt.setAttribute('fill',col); txt.setAttribute('font-size','11'); txt.setAttribute('font-family','Arial,sans-serif');
+        txt.style.pointerEvents='none'; txt.textContent=pl.name; svg.appendChild(txt);
+        const hit=svgLine(`glsHit_${sid}_${pl.pid}`,'transparent','14');
+        hit.style.pointerEvents='stroke'; hit.style.cursor='ew-resize';
+        const ttl=document.createElementNS('http://www.w3.org/2000/svg','title');
+        ttl.textContent=`${pl.name}:  P = ${fitP.toFixed(4)} d\nDrag to adjust · Click to activate`;
+        hit.appendChild(ttl);
+        hit.addEventListener('mousedown',e=>{ e.preventDefault(); e.stopPropagation(); _glsStartDrag(sid,pl.pid,e.clientX); });
+        hit.addEventListener('click',e=>{
+            e.stopPropagation();
+            if(glsDragStates[sid]?.didMove) return;
+            state.active=!state.active;
+            if(state.active){ Object.values(glsLineStates[sid]).forEach(s=>{ if(s!==state) s.active=false; }); showMsg(`Click GLS curve to set period for ${pl.name}`,true); }
+            buildGLSOverlay(sid);
+        });
+        svg.appendChild(hit);
+    });
+    svg.style.pointerEvents='none';
+}
+
+// ── GLS drag per slot ─────────────────────────────────────────────────────────
+function _glsStartDrag(sid,pid,clientX){
+    glsDragStates[sid]={pid,startClientX:clientX,currentPeriod:null,didMove:false};
+    el(`glsOverlay_${sid}`).style.pointerEvents='all';
+    if(!glsLineStates[sid]) glsLineStates[sid]={};
+    if(!glsLineStates[sid][pid]) glsLineStates[sid][pid]={active:false};
+    glsLineStates[sid][pid].active=true;
+    Object.entries(glsLineStates[sid]).forEach(([p,s])=>{ if(parseInt(p)!==pid) s.active=false; });
+    buildGLSOverlay(sid);
+    const mm=e=>_glsOnDragMove(sid,e),mu=()=>_glsOnDragEnd(sid);
+    glsDragStates[sid]._mm=mm; glsDragStates[sid]._mu=mu;
+    document.addEventListener('mousemove',mm);
+    document.addEventListener('mouseup',mu);
+}
+function _glsOnDragMove(sid,e){
+    const ds=glsDragStates[sid]; if(!ds) return;
+    const rect=el(`glsOverlay_${sid}`).getBoundingClientRect();
+    const period=pixelXToPeriod(sid,e.clientX-rect.left);
+    if(!period||period<=0) return;
+    ds.didMove=true; ds.currentPeriod=period;
+    const px=periodToPixelX(sid,period); if(px===null||!isFinite(px)) return;
+    [`glsVis_${sid}_${ds.pid}`,`glsHit_${sid}_${ds.pid}`].forEach(id=>{ const l=el(id); if(l){ l.setAttribute('x1',px); l.setAttribute('x2',px); } });
+    setNumVal(`pP_${ds.pid}`,period,6);
+}
+function _glsOnDragEnd(sid){
+    const ds=glsDragStates[sid]; if(!ds) return;
+    document.removeEventListener('mousemove',ds._mm);
+    document.removeEventListener('mouseup',ds._mu);
+    if(ds.didMove&&ds.currentPeriod){ setNumVal(`pP_${ds.pid}`,ds.currentPeriod,6); if(glsLineStates[sid]?.[ds.pid]) glsLineStates[sid][ds.pid].active=false; updateAllPanels(); buildGLSOverlay(sid); }
+    delete glsDragStates[sid];
+    el(`glsOverlay_${sid}`).style.pointerEvents='none';
+}
+function _glsHandleCurveClick(sid,period){
+    const states=glsLineStates[sid]||{};
+    const activePid=Object.entries(states).find(([,s])=>s.active)?.[0];
+    if(!activePid) return false;
+    const pl=planets.find(p=>p.pid===parseInt(activePid)); if(!pl) return false;
+    setNumVal(`pP_${pl.pid}`,period,6); states[activePid].active=false;
+    showMsg(`Period of ${pl.name} set to ${period.toFixed(4)} d`,true);
+    updateAllPanels(); buildGLSOverlay(sid); return true;
+}
+
+// ── Default opts ──────────────────────────────────────────────────────────────
+function defaultPlotOpts(opts={}){
+    return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x'};
+}
+function defaultGLSOpts(opts={}){
+    // copy from last GLS panel if exists
+    const last=panels.filter(p=>p.type==='gls').at(-1);
+    return{
+        pMin:     opts.pMin     ?? last?.pMin     ?? 1,
+        pMax:     opts.pMax     ?? last?.pMax     ?? 1000,
+        ofac:     opts.ofac     ?? last?.ofac     ?? 10,
+        xAxis:    opts.xAxis    ?? last?.xAxis    ?? 'logperiod',
+        showPeriod:opts.showPeriod ?? last?.showPeriod ?? true,
+        useExt:   opts.useExt   ?? last?.useExt   ?? false,
+        glsSubtract: opts.glsSubtract ?? {},
+        _afterplotBound: false,
+    };
+}
+
+// ── Add panel ─────────────────────────────────────────────────────────────────
+function addPanel(type,opts={}){
+    const sid=nextPanelId++;
+    const slot=type==='plot'
+        ? {type:'plot',sid,...defaultPlotOpts(opts)}
+        : {type:'gls', sid,...defaultGLSOpts(opts)};
+    panels.push(slot);
+    _buildPanelDOM(slot);
+    if(type==='plot'){ rebuildFoldSelects(); updatePlotSlot(sid); }
+    else{ rebuildGLSSubtractRows(); updateGLSSlot(sid); }
+    return slot;
+}
+
+// ── Build panel DOM ───────────────────────────────────────────────────────────
+function _buildPanelDOM(slot){
+    const sid=slot.sid,type=slot.type;
+    const isFirst=panels.indexOf(slot)===0;
+    const panel=makeEl('div',{class:'panel panel-slot',id:`panelSlot_${sid}`});
+
+    // header (draggable)
+    const arrowSpan=makeEl('span',{class:'collapse-arrow open',id:`slotArrow_${sid}`,text:'▼',style:{pointerEvents:'none'}});
+    const titleSpan=makeEl('span',{class:'panel-slot-title'});
+    titleSpan.appendChild(arrowSpan);
+    const icon=type==='plot'?'📈':'🔭';
+    const label=type==='plot'?`Plot ${sid}`:`GLS ${sid}`;
+    titleSpan.appendChild(makeEl('h2',{text:`${icon} ${label}`}));
+    const closeBtn=(!isFirst||panels.length>1)?makeEl('button',{class:'panel-slot-close',title:'Remove',html:'×'}):null;
+    if(closeBtn) closeBtn.addEventListener('click',e=>{ e.stopPropagation(); removePanel(sid); });
+    const header=makeEl('div',{class:'panel-slot-header',id:`slotHeader_${sid}`,draggable:true});
+    header.appendChild(titleSpan);
+    if(closeBtn) header.appendChild(closeBtn);
+
+    // drag logic — fix race condition with setTimeout
+    let _dragging=false;
+    header.addEventListener('dragstart',e=>{ _dragging=true; _dragPanelSid=sid; e.dataTransfer.effectAllowed='move'; panel.style.opacity='.5'; });
+    header.addEventListener('dragend',()=>{
+        _dragging=false; panel.style.opacity='';
+        document.querySelectorAll('.panel-slot.drag-over').forEach(p=>p.classList.remove('drag-over'));
+        // delay clearing sid so drop fires first
+        setTimeout(()=>{ _dragPanelSid=null; },0);
+    });
+    header.addEventListener('click',()=>{ if(!_dragging) togglePanelSlot(sid); });
+    panel.addEventListener('dragover',e=>{ e.preventDefault(); if(_dragPanelSid&&_dragPanelSid!==sid) panel.classList.add('drag-over'); });
+    panel.addEventListener('dragleave',()=>panel.classList.remove('drag-over'));
+    panel.addEventListener('drop',e=>{ e.preventDefault(); panel.classList.remove('drag-over'); if(_dragPanelSid&&_dragPanelSid!==sid) swapPanels(_dragPanelSid,sid); });
+
+    panel.appendChild(header);
+    const body=makeEl('div',{class:'panel-body',id:`slotBody_${sid}`});
+
+    if(type==='plot') _buildPlotBody(slot,body);
+    else              _buildGLSBody(slot,body);
+
+    panel.appendChild(body);
+    el('panelSlotsContainer').appendChild(panel);
+}
+
+function _buildPlotBody(slot,body){
+    const sid=slot.sid;
+    const optRow=makeEl('div',{class:'plot-options'});
+    const foldSel=makeEl('select',{id:`foldSelect_${sid}`,style:{fontSize:'13px',padding:'3px 6px'}});
+    foldSel.innerHTML='<option value="none">Time series</option>';
+    foldSel.addEventListener('change',()=>{ slot.foldPid=foldSel.value==='none'?null:parseInt(foldSel.value); updatePlotSlot(sid); });
+    optRow.appendChild(makeEl('label',{text:'Phase-fold:',style:{fontSize:'13px',color:'var(--text2)'}}));
+    optRow.appendChild(foldSel);
+    function mkCb(lbl,val,fn){ const l=makeEl('label',{class:'check-item'}); const cb=makeEl('input',{type:'checkbox'}); cb.checked=val; cb.addEventListener('change',()=>{ fn(cb.checked); updatePlotSlot(sid); }); l.appendChild(cb); l.appendChild(makeEl('span',{text:' '+lbl})); return l; }
+    optRow.appendChild(mkCb('Show residuals',slot.showRes,   v=>slot.showRes=v));
+    optRow.appendChild(mkCb('Color by time', slot.colorByTime,v=>slot.colorByTime=v));
+    optRow.appendChild(mkCb('Dates',         slot.showAsDate, v=>slot.showAsDate=v));
+    optRow.appendChild(mkCb('Show clipped',  slot.showClipped,v=>slot.showClipped=v));
+    const clipSel=makeEl('select',{id:`clippedStyle_${sid}`,style:{fontSize:'12px',padding:'2px 4px'}});
+    clipSel.innerHTML=`<option value="x">✕ cross</option><option value="circle-open">○ open</option><option value="circle-x-open">⊗ circle-x</option><option value="diamond-open">◇ diamond</option>`;
+    clipSel.value=slot.clippedStyle;
+    clipSel.addEventListener('change',()=>{ slot.clippedStyle=clipSel.value; updatePlotSlot(sid); });
+    optRow.appendChild(clipSel);
+    body.appendChild(optRow);
+    body.appendChild(makeEl('div',{class:'plot-rv',id:`plotRV_${sid}`}));
+    body.appendChild(makeEl('div',{class:'plot-divider',id:`resDivider_${sid}`,style:{display:slot.showRes?'':'none'}}));
+    body.appendChild(makeEl('div',{class:'plot-res',id:`plotRes_${sid}`,style:{display:slot.showRes?'':'none'}}));
+}
+
+function _buildGLSBody(slot,body){
+    const sid=slot.sid;
+    const optRow=makeEl('div',{class:'gls-slot-options'});
+    function numOpt(lbl,key,min,step){
+        optRow.appendChild(makeEl('label',{html:lbl,style:{fontSize:'13px',color:'var(--text2)'}}));
+        const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)});
+        inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); });
+        optRow.appendChild(inp); return inp;
+    }
+    numOpt('<em>P</em><sub>min</sub>','pMin',0.01,0.1);
+    numOpt('<em>P</em><sub>max</sub>','pMax',1,10);
+    numOpt('ofac','ofac',1,1);
+    // show period markers checkbox
+    const spLbl=makeEl('label',{class:'check-item'});
+    const spCb=makeEl('input',{type:'checkbox'}); spCb.checked=slot.showPeriod;
+    spCb.addEventListener('change',()=>{ slot.showPeriod=spCb.checked; buildGLSOverlay(sid); });
+    spLbl.appendChild(spCb); spLbl.appendChild(makeEl('span',{text:' Mark fit periods'}));
+    optRow.appendChild(spLbl);
+    // ext GLS
+    const extLbl=makeEl('label',{class:'check-item'});
+    const extCb=makeEl('input',{type:'checkbox'}); extCb.checked=slot.useExt;
+    extCb.addEventListener('change',()=>{ slot.useExt=extCb.checked; if(extCb.checked) loadExtGLS(sid); });
+    extLbl.appendChild(extCb); extLbl.appendChild(makeEl('span',{text:' mzechmeister/gls.js'}));
+    optRow.appendChild(extLbl);
+    // x-axis
+    optRow.appendChild(makeEl('label',{text:'x-axis',style:{fontSize:'13px',color:'var(--text2)'}}));
+    const xSel=makeEl('select',{style:{fontSize:'12px',padding:'2px 4px'}});
+    xSel.innerHTML=`<option value="logperiod">log Period [d]</option><option value="period">Period [d]</option><option value="freq">Frequency [d⁻¹]</option>`;
+    xSel.value=slot.xAxis;
+    xSel.addEventListener('change',()=>{ slot.xAxis=xSel.value; updateGLSSlot(sid); });
+    optRow.appendChild(xSel);
+    // compute button
+    const computeBtn=makeEl('button',{class:'btn-gls-run',text:'▶ Compute GLS'});
+    computeBtn.addEventListener('click',()=>updateGLSSlot(sid));
+    optRow.appendChild(computeBtn);
+    body.appendChild(optRow);
+    // subtract row
+    body.appendChild(makeEl('div',{class:'gls-subtract-row',id:`glsSubRow_${sid}`}));
+    // plot
+    const wrap=makeEl('div',{class:'gls-plot-wrapper'});
+    wrap.appendChild(makeEl('div',{class:'',id:`plotGLS_${sid}`,style:{width:'100%',height:'280px'}}));
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.id=`glsOverlay_${sid}`; svg.setAttribute('style','position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;');
+    wrap.appendChild(svg); body.appendChild(wrap);
+    body.appendChild(makeEl('div',{class:'gls-peak-info',id:`glsPeakInfo_${sid}`}));
+}
+
+function loadExtGLS(sid){
+    if(window.GLS){ showMsg('gls.js already loaded.',true); return; }
+    showMsg('Loading mzechmeister/gls.js…',true);
+    const s=document.createElement('script');
+    s.src='https://raw.githack.com/mzechmeister/GLS/master/javascript/gls.js';
+    s.onload=()=>showMsg('✅ mzechmeister/gls.js loaded.',true);
+    s.onerror=()=>{ showMsg('❌ Failed to load gls.js',false); };
+    document.head.appendChild(s);
+}
+
+function removePanel(sid){
+    panels=panels.filter(p=>p.sid!==sid);
+    el(`panelSlot_${sid}`)?.remove();
+    delete glsLineStates[sid];
+    delete glsDragStates[sid];
+}
+
+function swapPanels(sidA,sidB){
+    const domA=el(`panelSlot_${sidA}`),domB=el(`panelSlot_${sidB}`);
+    const container=el('panelSlotsContainer');
+    const nodes=[...container.children];
+    const iA=nodes.indexOf(domA),iB=nodes.indexOf(domB);
+    if(iA<iB){ container.insertBefore(domA,domB.nextSibling); container.insertBefore(domB,nodes[iA]); }
+    else      { container.insertBefore(domB,domA.nextSibling); container.insertBefore(domA,nodes[iB]); }
+    const si=panels.findIndex(p=>p.sid===sidA),sj=panels.findIndex(p=>p.sid===sidB);
+    [panels[si],panels[sj]]=[panels[sj],panels[si]];
+}
+
+function togglePanelSlot(sid){
+    const body=el(`slotBody_${sid}`),arrow=el(`slotArrow_${sid}`);
+    const open=!body.classList.contains('hidden');
+    body.classList.toggle('hidden',open); arrow.classList.toggle('open',!open); arrow.classList.toggle('closed',open);
+    if(!open){
+        const slot=panels.find(p=>p.sid===sid);
+        setTimeout(()=>{
+            if(slot?.type==='plot'){ Plotly.Plots.resize(`plotRV_${sid}`); if(slot.showRes) Plotly.Plots.resize(`plotRes_${sid}`); }
+            else if(slot?.type==='gls'){ Plotly.Plots.resize(`plotGLS_${sid}`); buildGLSOverlay(sid); }
+        },50);
+    }
+}
+
+// ── Update plot slot ──────────────────────────────────────────────────────────
+function updatePlotSlot(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
+    const p=getFullParamVector();
+    const foldPlIdx=slot.foldPid!==null?planetIndex(slot.foldPid):-1;
+    const P=foldPlIdx>=0?p[foldPlIdx*5]:0;
+    const{trRV,trRes}=buildTraces(p,slot.foldPid,P,slot);
+    const dd=buildDatasetsData();
+    if(dd.length) displayFitStats(p,dd);
+    updateDerived();
+    const{axBase,base,C}=makePlotBase();
+    const xLbl=xAxisLabel(slot);
+    const xAxisDate=slot.showAsDate&&!slot.foldPid;
+    const xAxisType=xAxisDate?'date':'linear';
+    const xAxExtra=xAxisDate?{}:{tickformat:'~r'};
+    const ML=75,MR=20;
+    const divider=el(`resDivider_${sid}`),resDiv=el(`plotRes_${sid}`);
+    if(divider) divider.style.display=slot.showRes?'':'none';
+    if(resDiv)  resDiv.style.display =slot.showRes?'':'none';
+    Plotly.react(`plotRV_${sid}`,trRV,{...base,margin:{l:ML,r:MR,t:15,b:slot.showRes?5:50},
+        xaxis:slot.showRes?{...axBase,...xAxExtra,title:'',showticklabels:false,type:xAxisType}:{...axBase,...xAxExtra,title:xLbl,type:xAxisType},
+        yaxis:{...axBase,tickformat:'~r',title:`RV [${getKUnit()}]`},
+        legend:{x:.01,y:.99,xanchor:'left',yanchor:'top',bgcolor:C.legendBg,bordercolor:C.grid,borderwidth:1}},
+        {responsive:true,displayModeBar:'hover'});
+    if(slot.showRes){
+        Plotly.react(`plotRes_${sid}`,trRes,{...base,margin:{l:ML,r:MR,t:5,b:50},
+            xaxis:{...axBase,...xAxExtra,title:xLbl,type:xAxisType},
+            yaxis:{...axBase,tickformat:'~r',title:`Residuals [${getKUnit()}]`,zeroline:true,zerolinewidth:1},
+            showlegend:false},{responsive:true,displayModeBar:'hover'});
+    }
+    saveToSession();
+}
+
+// ── Update GLS slot ───────────────────────────────────────────────────────────
+function updateGLSSlot(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    const dd=buildDatasetsData(),p=getFullParamVector();
+    const{axBase,base,C}=makePlotBase();
+    const xFreq=slot.xAxis==='freq';
+    const xTitle=xFreq?'Frequency [d⁻¹]':'Period <i>P</i> [days]';
+    const xAxisType=slot.xAxis==='logperiod'?'log':'linear';
+    const plotDiv=el(`plotGLS_${sid}`);
+    if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<4){
+        Plotly.react(plotDiv,[],{...base,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
+        el(`glsPeakInfo_${sid}`).textContent='No data.';
+        _registerGLSListeners(sid); return;
+    }
+    const pMin=slot.pMin||1,pMax=slot.pMax||1000,ofac=slot.ofac||10;
+    const allTs=[],allRVs=[],allErrs=[];
+    dd.forEach(({ts,rvs,errs,dsIdx})=>{
+        const g=p[gammaOffset()+dsIdx]||0;
+        ts.forEach((t,i)=>{
+            let rv=rvs[i]-g;
+            planets.forEach((pl,pi)=>{
+                if(pl.active===false) return;
+                const sub=slot.glsSubtract?.[pl.pid];
+                if(sub===false) return;
+                rv-=keplerianRV(t,p[pi*5],p[pi*5+1],p[pi*5+2],p[pi*5+3],p[pi*5+4]);
+            });
+            allTs.push(t); allRVs.push(rv); allErrs.push(errs[i]);
+        });
+    });
+    const fMin=1/pMax,fMax=1/pMin;
+    let periods,power,freqs;
+    const useExt=slot.useExt&&typeof GLS==='function';
+    if(slot.useExt&&!useExt) showMsg('⏳ mzechmeister/gls.js not yet loaded.',true);
+    if(useExt){
+        try{ const r=GLS(allTs,allRVs,{e_y:allErrs,fbeg:fMin,fend:fMax,ofac}); freqs=Array.from(r.f); periods=freqs.map(f=>1/f); power=Array.from(r.p); }
+        catch(err){ showMsg(`❌ GLS error: ${err.message}`,false); return; }
+    } else {
+        const T=dd.reduce((mx,d)=>{ const sp=Math.max(...d.ts)-Math.min(...d.ts); return sp>mx?sp:mx; },0)||(1/fMin);
+        const nFreq=Math.max(Math.round(ofac*T*(fMax-fMin)),100);
+        freqs=Array.from({length:nFreq},(_,i)=>fMin+(fMax-fMin)*i/(nFreq-1));
+        periods=freqs.map(f=>1/f);
+        power=Array.from(computeGLS_builtin(allTs,allRVs,allErrs,freqs));
+    }
+    let peakIdx=0,peakPow=0;
+    for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
+    const peakPeriod=periods[peakIdx],peakFreq=freqs[peakIdx],peakX=xFreq?peakFreq:peakPeriod;
+    const xData=xFreq?freqs:periods,xL=xFreq?fMax:pMin,xR=xFreq?fMin:pMax;
+    const pkCol=peakMarkerColor();
+    const peakLabel=xFreq?`Peak  <i>f</i> = ${peakFreq.toFixed(5)} d⁻¹`:`Peak  <i>P</i> = ${peakPeriod.toFixed(4)} d`;
+    const fapLevels=[0.1,0.01,0.001],fapColors=['#ffbe0b','#f72585','#a0ff78'];
+    const traces=[{x:xData,y:power,mode:'lines',type:'scatter',name:useExt?'GLS (mzechmeister)':'GLS Power',line:{color:'#4cc9f0',width:1.5}}];
+    fapLevels.forEach((fap,i)=>{ const pw=1-Math.pow(1-fap,1/power.length); traces.push({x:[xL,xR],y:[pw,pw],mode:'lines',type:'scatter',name:`FAP ${(fap*100).toFixed(1)}%`,line:{color:fapColors[i],width:1,dash:'dot'}}); });
+    traces.push({x:[peakX],y:[peakPow],mode:'markers',type:'scatter',name:peakLabel,marker:{symbol:'circle-open',size:16,color:pkCol,line:{color:pkCol,width:2.5}},hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`});
+    Plotly.react(plotDiv,traces,{...base,margin:{l:65,r:20,t:15,b:50},
+        xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},
+        yaxis:{...axBase,tickformat:'~r',title:'GLS Power',range:[0,Math.min(1,peakPow*1.2)]},
+        legend:{x:.99,y:.99,xanchor:'right',yanchor:'top',bgcolor:C.legendBg,bordercolor:C.grid,borderwidth:1}},
+        {responsive:true,displayModeBar:'hover'});
+    el(`glsPeakInfo_${sid}`).textContent=xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`;
+    _registerGLSListeners(sid);
+}
+
+function _registerGLSListeners(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    if(slot._afterplotBound) return;
+    const plotDiv=el(`plotGLS_${sid}`); if(!plotDiv) return;
+    plotDiv.on('plotly_afterplot',()=>buildGLSOverlayWhenReady(sid));
+    plotDiv.on('plotly_relayout',()=>buildGLSOverlay(sid));
+    plotDiv.on('plotly_click',data=>{
+        const pt=data.points[0]; if(pt.curveNumber!==0) return;
+        const period=slot.xAxis==='freq'?1/pt.x:pt.x;
+        const handled=_glsHandleCurveClick(sid,period);
+        if(!handled) el(`glsPeakInfo_${sid}`).textContent=`Selected: P = ${period.toFixed(5)} d  (power = ${pt.y.toFixed(4)})  — click a period line first to assign`;
+    });
+    slot._afterplotBound=true;
+}
+
+function updateAllPanels(){
+    datasets.forEach(ds=>updateStatsBar(ds.id));
+    el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
+    panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else updateGLSSlot(p.sid); });
+}
+
+// ── New project ───────────────────────────────────────────────────────────────
+function newProject(){
+    if(!confirm('Start a new project? Unsaved changes will be lost.')) return;
+    datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
+    datasets=[]; nextId=1; activeId=null;
+    ['dsTabs','dsPanes','gammaRows','planetBlocks','planetTabBar','planetTable','panelSlotsContainer'].forEach(id=>{ const e=el(id); if(e) e.innerHTML=''; });
+    planets=[]; nextPlanetId=1; activePlanetPid=null;
+    Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
+    Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
+    panels=[]; nextPanelId=1;
+    el('projectName').value='untitled'; lastSavedFilename=null;
+    undoSnapshot=null; _lastSigmasFull=null;
+    el('undoBtn').disabled=true; el('globalBJD0').value='0';
+    sessionStorage.removeItem('rvfitter_project');
+    updateWindowTitle(); clearErrors();
+    addPlanet(); addDataset();
+    addPanel('plot'); addPanel('gls');
+    showMsg('New project started.',true);
+}
+
+// ── Planet active toggle ──────────────────────────────────────────────────────
+function onPlanetActiveToggle(pid){
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+    pl.active=getChecked(`pActive_${pid}`);
+    el(`planetBlock_${pid}`)?.classList.toggle('inactive',!pl.active);
+    el(`pBody_${pid}`)?.querySelectorAll('input,select').forEach(e=>e.disabled=!pl.active);
+    _updatePlanetTabDot(pid);
+    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+}
+
+// ── Planet view toggle ────────────────────────────────────────────────────────
+function setPlanetView(view){
+    _planetView=view;
+    el('planetTabView').style.display   =view==='tabs' ?'':'none';
+    el('planetTableView').style.display =view==='table'?'':'none';
+    el('btnPlanetViewTab').classList.toggle('active',   view==='tabs');
+    el('btnPlanetViewTable').classList.toggle('active', view==='table');
+    if(view==='table') buildPlanetTable();
+}
+
+// ── Planet TABLE view ─────────────────────────────────────────────────────────
+function getPTRows(){
+    const KU=getKUnit();
+    return[
+        {key:'P',    labelHtml:'<em>P</em> [days]',    step:0.1,  min:null,max:null},
+        {key:'K',    labelHtml:`<em>K</em> [${KU}]`,   step:1,    min:null,max:null},
+        {key:'e',    labelHtml:'<em>e</em>',            step:0.01, min:0,   max:0.99},
+        {key:'omega',labelHtml:'<em>ω</em> [°]',        step:1,    min:null,max:null},
+        {key:'t0',   labelHtml:null,                    step:0.1,  min:null,max:null},
+    ];
+}
+function buildPlanetTable(){
+    const tbl=el('planetTable'); tbl.innerHTML='';
+    const n=planets.length; if(!n) return;
+    tbl.style.setProperty('--n-planets',n);
+    const KU=getKUnit();
+    tbl.appendChild(makeEl('div',{class:'pt-corner'}));
+    planets.forEach((pl,i)=>{
+        const col=planetColor(i);
+        const nameInp=makeEl('input',{class:'planet-name-input',id:`pName_${pl.pid}`,value:pl.name,style:{color:col}});
+        nameInp.addEventListener('change',()=>onPlanetRename(pl.pid));
+        const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pl.pid}`,style:{accentColor:col,width:'13px',height:'13px',cursor:'pointer',flexShrink:'0'}});
+        activeCb.checked=pl.active!==false; activeCb.addEventListener('change',()=>onPlanetActiveToggle(pl.pid));
+        const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove',text:'×',style:{fontSize:'11px',padding:'0 2px'}});
+        delBtn.addEventListener('click',()=>removePlanet(pl.pid));
+        const head=makeEl('div',{class:'pt-head',style:{borderBottomColor:col}});
+        head.appendChild(activeCb); head.appendChild(nameInp); head.appendChild(delBtn);
+        tbl.appendChild(head);
+    });
+    getPTRows().forEach(({key,labelHtml,step,min,max})=>{
+        tbl.appendChild(makeEl('div',{class:'pt-label',html:key==='t0'?tOmegaLabel():labelHtml}));
+        planets.forEach(pl=>{
+            const fitKey=`fit${key.charAt(0).toUpperCase()+key.slice(1)}`;
+            const ptId=`pt_${key}_${pl.pid}`;
+            let val=key==='K'?fromMs(pl.K_ms||0,KU):key==='omega'?pl.omega_deg:key==='t0'?pl.t0:pl[key]??0;
+            const fitCb=makeEl('input',{type:'checkbox',title:'Include in fit'});
+            fitCb.checked=pl[fitKey]??true;
+            fitCb.addEventListener('change',()=>{ pl[fitKey]=fitCb.checked; updateAllPanels(); });
+            const inp=makeEl('input',{type:'number',id:ptId,value:String(val),step:String(step),
+                ...(min!=null?{min:String(min)}:{}),
+                ...(max!=null?{max:String(max)}:{})});
+            inp.addEventListener('change',()=>{ syncTableToDOM(pl.pid); updateAllPanels(); });
+            inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+            if(key==='P') inp.addEventListener('change',()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)));
+            const topRow=makeEl('div',{class:'pt-cell-top'});
+            topRow.appendChild(fitCb); topRow.appendChild(inp);
+            const sigSpan=makeEl('span',{class:'param-sigma',id:`ptSig_${key}_${pl.pid}`});
+            const cell=makeEl('div',{class:'pt-cell'});
+            cell.appendChild(topRow); cell.appendChild(sigSpan);
+            tbl.appendChild(cell);
+        });
+    });
+    tbl.appendChild(makeEl('div',{class:'pt-label sep',html:'<em>m</em>&thinsp;sin&thinsp;<em>i</em>'}));
+    planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptMass_${pl.pid}`,text:'—'})));
+    tbl.appendChild(makeEl('div',{class:'pt-label',html:'<em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]'}));
+    planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptSma_${pl.pid}`,text:'—'})));
+    planets.forEach(pl=>syncDOMToTable(pl.pid));
+}
+function syncTableToDOM(pid){
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+    const KU=getKUnit();
+    const get=k=>parseFloat(el(`pt_${k}_${pid}`)?.value)||0;
+    pl.P=get('P'); pl.K_ms=toMs(get('K'),KU); pl.e=get('e'); pl.omega_deg=get('omega'); pl.t0=get('t0');
+    setNumVal(`pP_${pid}`,pl.P,6); setNumVal(`pK_${pid}`,fromMs(pl.K_ms,KU),4);
+    setNumVal(`pE_${pid}`,pl.e,6); setNumVal(`pOmega_${pid}`,pl.omega_deg,2);
+    setNumVal(`pT0_${pid}`,pl.t0,4);
+}
+function syncDOMToTable(pid){
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+    const KU=getKUnit();
+    const set=(k,v,d)=>{ const e=el(`pt_${k}_${pid}`); if(e) e.value=isFinite(v)?v.toFixed(d):''; };
+    set('P',pl.P,6); set('K',fromMs(pl.K_ms||0,KU),4); set('e',pl.e,6);
+    set('omega',pl.omega_deg,2); set('t0',pl.t0,4);
+}
+function updateTableErrors(sigmas){
+    const KU=getKUnit();
+    const fmt=(v,isRV,isOmega)=>{ if(!v||!isFinite(v)) return ''; if(isOmega) return `±${fmtSig3(v*180/Math.PI)}°`; if(isRV) return `±${fmtSig3(fromMs(v,KU))}`; return `±${fmtSig3(v)}`; };
+    planets.forEach((pl,i)=>{ const b=i*5; [['P',0,false,false],['K',1,true,false],['e',2,false,false],['omega',3,false,true],['t0',4,false,false]].forEach(([k,off,isRV,isOmega])=>{ const s=el(`ptSig_${k}_${pl.pid}`); if(s) s.textContent=fmt(sigmas[b+off],isRV,isOmega); }); });
+}
+function updateTableDerived(){
+    planets.forEach(pl=>{
+        const m=el(`ptMass_${pl.pid}`),s=el(`ptSma_${pl.pid}`);
+        const mSrc=el(`pMass_${pl.pid}`),sSrc=el(`pSma_${pl.pid}`);
+        if(m&&mSrc) m.textContent=mSrc.textContent;
+        if(s&&sSrc) s.textContent=sSrc.textContent;
+    });
+}
+
+// ── Planet tabs ───────────────────────────────────────────────────────────────
+function rebuildPlanetTabs(){
+    const bar=el('planetTabBar'); bar.innerHTML='';
+    const isAll=activePlanetPid==='all';
+    const allTab=makeEl('div',{class:'planet-tab'+(isAll?' active':''),id:'ptab_all',style:{color:isAll?'var(--accent)':'var(--text2)'}});
+    allTab.appendChild(makeEl('span',{text:'All'}));
+    allTab.addEventListener('click',()=>switchPlanetTab('all'));
+    bar.appendChild(allTab);
+    planets.forEach(pl=>{
+        const col=planetColor(planetIndex(pl.pid));
+        const isActive=pl.pid===activePlanetPid;
+        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,style:{borderTopColor:col,color:isActive?col:'var(--text2)'}});
+        tab.appendChild(makeEl('span',{text:'●',style:{color:col,fontSize:'10px',opacity:pl.active===false?'.35':'1'}}));
+        tab.appendChild(makeEl('span',{text:pl.name}));
+        tab.addEventListener('click',()=>switchPlanetTab(pl.pid));
+        bar.appendChild(tab);
+    });
+    const addBtn=makeEl('button',{class:'planet-tab-add',title:'Add planet',text:'+'});
+    addBtn.addEventListener('click',()=>addPlanet());
+    bar.appendChild(addBtn);
+}
+function switchPlanetTab(pid){
+    activePlanetPid=pid;
+    const showAll=pid==='all';
+    planets.forEach(pl=>{ el(`planetBlock_${pl.pid}`)?.classList.toggle('active',showAll||pl.pid===pid); });
+    document.querySelectorAll('.planet-tab').forEach(t=>{
+        const p=t.id.replace('ptab_','');
+        const isActive=p===String(pid);
+        t.classList.toggle('active',isActive);
+        if(p==='all') t.style.color=isActive?'var(--accent)':'var(--text2)';
+        else{ const col=planetColor(planetIndex(parseInt(p))); t.style.color=isActive?col:'var(--text2)'; }
+    });
+}
+function _updatePlanetTabDot(pid){
+    const tab=el(`ptab_${pid}`); if(!tab) return;
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+    const dot=tab.querySelector('span'); if(dot) dot.style.opacity=pl.active===false?'.35':'1';
+}
+
+// ── Planet param row ──────────────────────────────────────────────────────────
+function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
+    const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:fitId,title:'Include in fit'});
+    fitCb.checked=extra.checked??true; fitCb.addEventListener('change',updateAllPanels);
+    const lbl=makeEl('label',{for:inputId,html:labelHtml});
+    const inp=makeEl('input',{type:'number',id:inputId,step:String(step),value:String(extra.value??0),
+        ...(extra.min!=null?{min:String(extra.min)}:{}),
+        ...(extra.max!=null?{max:String(extra.max)}:{})});
+    inp.addEventListener('change',updateAllPanels);
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+    if(extra.onChange) inp.addEventListener('change',extra.onChange);
+    const sig=makeEl('span',{class:'param-sigma',id:sigId});
+    const row=makeEl('div',{class:'param-item'});
+    row.appendChild(fitCb); row.appendChild(lbl); row.appendChild(inp); row.appendChild(sig);
+    return row;
+}
+
+// ── Build planet block ────────────────────────────────────────────────────────
+function _buildPlanetBlock(pl,col,KU){
+    const pid=pl.pid;
+    const isAll=activePlanetPid==='all';
+    const div=makeEl('div',{class:'planet-block'+((pl.pid===activePlanetPid||isAll)?' active':'')+(pl.active===false?' inactive':''),id:`planetBlock_${pid}`});
+    const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pid}`,title:'Enable/disable',style:{accentColor:col,width:'14px',height:'14px',cursor:'pointer',flex:'0 0 auto'}});
+    activeCb.checked=pl.active!==false; activeCb.addEventListener('change',()=>onPlanetActiveToggle(pid));
+    const nameInp=makeEl('input',{class:'planet-name-input',id:`pName_${pid}`,value:pl.name,style:{color:col}});
+    nameInp.addEventListener('change',()=>onPlanetRename(pid));
+    nameInp.addEventListener('keydown',e=>{ if(e.key==='Enter') nameInp.blur(); });
+    const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove planet',text:'×'});
+    delBtn.addEventListener('click',e=>{ e.stopPropagation(); removePlanet(pid); });
+    const header=makeEl('div',{class:'planet-header'},[activeCb,nameInp,delBtn]);
+    const onGLSChange=()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    const pRow=makePlanetParamRow(pid,`fitP_${pid}`,'<em>P</em> – Period [days]',`pP_${pid}`,0.1,`sigP_${pid}`,{value:pl.P,checked:pl.fitP??true,onChange:onGLSChange});
+    const kRow=makePlanetParamRow(pid,`fitK_${pid}`,'<em>K</em> – Semi-amplitude',`pK_${pid}`,1,`sigK_${pid}`,{value:fromMs(pl.K_ms||0,KU),checked:pl.fitK??true});
+    const eRow=makePlanetParamRow(pid,`fitE_${pid}`,'<em>e</em> – Eccentricity',`pE_${pid}`,0.01,`sigE_${pid}`,{value:pl.e,checked:pl.fitE??true,min:0,max:0.99});
+    const omRow=makePlanetParamRow(pid,`fitOmega_${pid}`,'<em>ω</em> – Arg. periastron [°]',`pOmega_${pid}`,1,`sigOmega_${pid}`,{value:pl.omega_deg,checked:pl.fitOmega??true});
+    const t0Row=makePlanetParamRow(pid,`fitT0_${pid}`,tOmegaLabel(),`pT0_${pid}`,0.1,`sigT0_${pid}`,{value:pl.t0,checked:pl.fitT0??true});
+    const massRow=makeEl('div',{class:'planet-derived'});
+    massRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>m</em>&thinsp;sin&thinsp;<em>i</em></span><span id="pMass_${pid}" style="font-size:12px;color:var(--val);font-family:monospace;">—</span>`;
+    const smaRow=makeEl('div',{class:'planet-derived'});
+    smaRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]</span><span id="pSma_${pid}" style="font-size:12px;color:var(--val);font-family:monospace;">—</span>`;
+    const body=makeEl('div',{class:'planet-body',id:`pBody_${pid}`},[pRow,kRow,eRow,omRow,t0Row,massRow,smaRow]);
+    if(pl.active===false) body.querySelectorAll('input,select').forEach(e=>e.disabled=true);
+    div.appendChild(header); div.appendChild(body);
+    el('planetBlocks').appendChild(div);
+}
+
+function addPlanet(opts={}){
+    const pid=nextPlanetId++,i=planets.length,col=planetColor(i),KU=getKUnit();
+    const bjd0=getGlobalBJD0();
+    const allTs=datasets.flatMap(ds=>(ds.rawRows||[]).map(r=>r.t+getDsT0Ref(ds)-bjd0));
+    const tMean=allTs.length?mean(allTs):0,tSpan=allTs.length>=2?Math.max(...allTs)-Math.min(...allTs):10;
+    const pl={pid,name:opts.name??defaultPlanetName(i),P:opts.P??Math.max(tSpan/2,1),
+        K_ms:opts.K_ms??toMs(opts.K??50,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0:opts.t0??tMean,
+        fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
+        fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
+        active:opts.active??true,glsSubtract:opts.glsSubtract??true};
+    planets.push(pl);
+    activePlanetPid=pid;
+    _buildPlanetBlock(pl,col,KU);
+    rebuildPlanetTabs(); switchPlanetTab(pid);
+    if(_planetView==='table') buildPlanetTable();
+    rebuildGLSSubtractRows(); rebuildFoldSelects();
+}
+function onPlanetRename(pid){
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+    pl.name=el(`pName_${pid}`)?.value||defaultPlanetName(planetIndex(pid));
+    const tab=el(`ptab_${pid}`); if(tab){ const lbl=tab.querySelectorAll('span')[1]; if(lbl) lbl.textContent=pl.name; }
+    if(_planetView==='table') buildPlanetTable();
+    updateAllPanels(); rebuildGLSSubtractRows(); rebuildFoldSelects(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+}
+function removePlanet(pid){
+    readAllPlanetDOM(); planets=planets.filter(p=>p.pid!==pid);
+    el(`planetBlock_${pid}`)?.remove();
+    if(activePlanetPid===pid) activePlanetPid=planets[0]?.pid||null;
+    rebuildPlanetTabs();
+    if(activePlanetPid) switchPlanetTab(activePlanetPid);
+    if(_planetView==='table') buildPlanetTable();
+    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+}
+
+// ── Fit buttons helper ────────────────────────────────────────────────────────
+function setFitBtnsDisabled(dis){
+    ['btnFit','btnFitTop'].forEach(id=>{ const b=el(id); if(b) b.disabled=dis; });
+}
+// ── Dataset drag & drop ───────────────────────────────────────────────────────
+function setupDatasetDrag(tab,id){
+    tab.draggable=true;
+    tab.addEventListener('dragstart',e=>{ dragDsPid=id; tab.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    tab.addEventListener('dragend',()=>{ tab.classList.remove('dragging'); clearDsDragOver(); dragDsPid=null; });
+    tab.addEventListener('dragover',e=>{ e.preventDefault(); if(dragDsPid!==null&&dragDsPid!==id){ clearDsDragOver(); tab.classList.add('drag-over'); } });
+    tab.addEventListener('dragleave',()=>tab.classList.remove('drag-over'));
+    tab.addEventListener('drop',e=>{ e.preventDefault(); tab.classList.remove('drag-over'); if(dragDsPid!==null&&dragDsPid!==id) _swapDatasets(dragDsPid,id); });
+}
+function clearDsDragOver(){ document.querySelectorAll('.ds-tab.drag-over').forEach(e=>e.classList.remove('drag-over')); }
+function _swapDatasets(idA,idB){ const iA=datasets.findIndex(d=>d.id===idA),iB=datasets.findIndex(d=>d.id===idB); if(iA<0||iB<0) return; [datasets[iA],datasets[iB]]=[datasets[iB],datasets[iA]]; renderTabs(); rebuildGammaUI(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)); }
+
+// ── Dataset helpers ───────────────────────────────────────────────────────────
+function getDsColor(ds,idx){ return el(`dsColor_${ds.id}`)?.value||PALETTE[idx%PALETTE.length]; }
+function getDsSymbol(ds){ return el(`dsSymbol_${ds.id}`)?.value||'circle'; }
+function getDsOpacity(ds){ return parseFloat(el(`dsOpacity_${ds.id}`)?.value)||1.0; }
+function getDsSize(ds){ return parseInt(el(`dsSize_${ds.id}`)?.value)||8; }
+function dsIndex(id){ return datasets.findIndex(d=>d.id===id); }
+function dsById(id){ return datasets.find(d=>d.id===id); }
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+function setDsView(id,view){
+    const cm=el(`cmWrap_${id}`),pv=el(`preview_${id}`),btnRaw=el(`btnRaw_${id}`),btnPrev=el(`btnPrev_${id}`);
+    if(view==='raw'){ cm.style.display='block'; pv.style.display='none'; btnRaw.classList.add('active'); btnPrev.classList.remove('active'); dsById(id)?.editor.refresh(); }
+    else{ cm.style.display='none'; pv.style.display='block'; btnRaw.classList.remove('active'); btnPrev.classList.add('active'); buildDsPreview(id); }
+}
+function splitAtDecimal(s){ const d=s.indexOf('.'); return d<0?{int:s,dec:''}:{int:s.slice(0,d),dec:s.slice(d)}; }
+
+function buildDsPreview(id){
+    const ds=dsById(id); if(!ds) return;
+    const pv=el(`preview_${id}`); pv.innerHTML='';
+    const clipOn=getChecked(`clipEnabled_${id}`,false),clipped=getClippedSet(id);
+    const KU=getKUnit(),dsUnit=getDsUnit(ds),t0ref=getDsT0Ref(ds),bjd0=getGlobalBJD0();
+    const parsed=[]; let dataIdx=0;
+    ds.editor.getValue().split('\n').forEach((line,lineIdx)=>{
+        const l=line.trim(),isComment=!l||l.startsWith('#');
+        if(isComment){ parsed.push({lineIdx,line,isComment:true}); return; }
+        const parts=l.split(/[\s,;]+/),tRaw=parseFloat(parts[0]||'');
+        const tAdj=isFinite(tRaw)?tRaw+t0ref-bjd0:NaN;
+        parsed.push({lineIdx,line,isComment:false,dataIdx:dataIdx++,tRaw:parts[0]||'',tAdj,rv:parts[1]||'',err:parts[2]||'',iso:isFinite(tRaw)?jdToIso(tRaw+t0ref):'—'});
+    });
+    const dataRows=parsed.filter(r=>!r.isComment);
+    const tStrs=dataRows.map(r=>isFinite(r.tAdj)?r.tAdj.toFixed(6):(r.tRaw||'—'));
+    const tSplits=tStrs.map(s=>splitAtDecimal(s));
+    const wTInt=Math.max(1,...tSplits.map(s=>s.int.length));
+    const wTDec=Math.max(0,...tSplits.map(s=>s.dec.length));
+    const rvErrPairs=dataRows.map(r=>{
+        const rvNum=parseFloat(r.rv),errNum=parseFloat(r.err);
+        const rvMs=isNaN(rvNum)?null:toMs(rvNum,dsUnit);
+        const errMs=(!isNaN(errNum)&&errNum>0)?toMs(errNum,dsUnit):null;
+        const rvDisp=rvMs!==null?fromMs(rvMs,KU):null;
+        const errDisp=errMs!==null?fromMs(errMs,KU):null;
+        const{rvStr,errStr}=fmtRVPair(rvDisp??NaN,errDisp??NaN);
+        return{rvStr:rvDisp!==null?rvStr:'—',errStr:errDisp!==null?errStr:''};
+    });
+    const wISO=19,wRV=Math.max(6,...rvErrPairs.map(p=>p.rvStr.length)),wErr=Math.max(0,...rvErrPairs.map(p=>p.errStr.length));
+    const mkNum=(s,w,c)=>makeEl('span',{text:s.padStart(w),style:{fontFamily:'monospace',whiteSpace:'pre',marginRight:'12px',color:c}});
+    function mkTimeCell(tStr){ const{int,dec}=splitAtDecimal(tStr); const wrap=makeEl('span',{class:'ds-preview-time-wrap',style:{marginRight:'12px'}}); wrap.appendChild(makeEl('span',{class:'ds-preview-time-int',text:int.padStart(wTInt)})); wrap.appendChild(makeEl('span',{class:'ds-preview-time-dec',text:dec.padEnd(wTDec)})); return wrap; }
+    const mkHdr=(txt,w)=>makeEl('span',{text:txt.padStart(w),style:{fontFamily:'monospace',whiteSpace:'pre',marginRight:'12px',color:'var(--accent)'}});
+    function mkHdrTime(){ const lbl=bjd0?`t − ${bjd0}`:'time [JD]'; const totalW=wTInt+wTDec; const wrap=makeEl('span',{class:'ds-preview-time-wrap',style:{marginRight:'12px'}}); wrap.appendChild(makeEl('span',{text:lbl.padStart(totalW),style:{fontFamily:'monospace',whiteSpace:'pre',color:'var(--accent)'}})); return wrap; }
+    const hdr=makeEl('div',{class:'ds-preview-row',style:{borderBottom:'1px solid var(--border)',marginBottom:'2px',paddingBottom:'2px',fontWeight:'bold'}});
+    hdr.appendChild(makeEl('span',{style:{minWidth:'28px',flex:'0 0 auto',marginRight:'8px'}}));
+    hdr.appendChild(makeEl('span',{style:{width:'19px',flex:'0 0 auto'}}));
+    hdr.appendChild(mkHdr('date (UTC)',wISO)); hdr.appendChild(mkHdrTime());
+    hdr.appendChild(mkHdr(`RV [${KU}]`,wRV)); if(wErr>0) hdr.appendChild(mkHdr(`err [${KU}]`,wErr));
+    pv.appendChild(hdr);
+    parsed.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,iso})=>{
+        const row=makeEl('div',{class:'ds-preview-row'+(isComment?' comment':'')});
+        row.appendChild(makeEl('span',{text:String(lineIdx+1),style:{color:'var(--cm-gutter-fg)',fontSize:'11px',minWidth:'28px',textAlign:'right',marginRight:'8px',userSelect:'none',flex:'0 0 auto'}}));
+        if(!isComment){
+            const cb=makeEl('input',{type:'checkbox',class:'ds-preview-cb',title:'Clip this point'});
+            cb.checked=clipped.has(myIdx); if(clipOn&&cb.checked) row.classList.add('clipped');
+            cb.addEventListener('change',()=>{ const hcb=el(`clip_${id}_${myIdx}`); if(hcb){ hcb.checked=cb.checked; onClipToggle(id,myIdx); } row.classList.toggle('clipped',cb.checked&&getChecked(`clipEnabled_${id}`,false)); });
+            row.appendChild(cb);
+            const di=dataRows.findIndex(r=>r.dataIdx===myIdx);
+            const pair=di>=0?rvErrPairs[di]:{rvStr:'—',errStr:''};
+            const tStr=isFinite(tAdj)?tAdj.toFixed(6):'—';
+            row.appendChild(mkNum(iso,wISO,'var(--accent2)'));
+            row.appendChild(mkTimeCell(tStr));
+            row.appendChild(mkNum(pair.rvStr,wRV,'var(--cyan)'));
+            if(wErr>0) row.appendChild(mkNum(pair.errStr,wErr,'var(--text2)'));
+        } else {
+            row.appendChild(makeEl('span',{style:{width:'19px',flex:'0 0 auto'}}));
+            row.appendChild(makeEl('span',{text:line,style:{fontFamily:'monospace',whiteSpace:'pre',color:'var(--text2)',opacity:'.6'}}));
+        }
+        pv.appendChild(row);
+    });
+}
+
+// ── Add dataset ───────────────────────────────────────────────────────────────
+function addDataset(initialText='',initialName=null,opts={}){
+    const id=nextId++,idx=datasets.length,name=initialName||`Dataset ${idx+1}`;
+    const col=opts.color||PALETTE[idx%PALETTE.length];
+    const rvUnit=opts.rvUnit||'m/s',sym=opts.symbol||'circle';
+    const opacity=opts.opacity!=null?opts.opacity:1.0,size=opts.size||8,t0ref=opts.t0ref||0;
+    const pane=makeEl('div',{class:'ds-pane',id:`pane_${id}`});
+    pane.innerHTML=`
+    <div class="ds-header" id="dsHeader_${id}" style="border-left-color:${col};">
+        <input type="color" id="dsColor_${id}" value="${col}" title="Colour" style="width:26px;height:22px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
+        <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
+        <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
+        <label>α</label><input type="range" id="dsOpacity_${id}" min="0.05" max="1" step="0.05" value="${opacity}" title="Opacity">
+        <label title="Added to file times">t0ref</label><input type="number" id="t0ref_${id}" value="${t0ref}" step="1">
+        <label>unit</label><select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select>
+    </div>
+    <div class="view-toggle">
+        <button id="btnRaw_${id}" class="active">Raw</button><button id="btnPrev_${id}">Preview</button>
+        <label><input type="checkbox" id="clipEnabled_${id}" style="width:13px;height:13px;accent-color:#f72585;"> clip enabled</label>
+    </div>
+    <div id="cmWrap_${id}"><div id="cm_${id}"></div></div>
+    <div class="ds-preview" id="preview_${id}" style="display:none;"></div>
+    <div class="data-stats-bar" id="statsBar_${id}" style="display:none;">
+        <div class="stat-item"><span class="stat-label"><em>n</em> =</span><span class="stat-val" id="statN_${id}">—</span></div>
+        <div class="stat-item"><span class="stat-label">span =</span><span class="stat-val" id="statSpan_${id}">—</span></div>
+        <div class="stat-item"><span class="stat-label"><em>σ</em>(RV) =</span><span class="stat-val" id="statSigma_${id}">—</span></div>
+        <div class="stat-item"><span class="stat-label">median err =</span><span class="stat-val" id="statMedErr_${id}">—</span></div>
+        <div class="stat-item" id="statClipItem_${id}" style="display:none;"><span class="stat-label">clipped =</span><span class="stat-val" id="statClip_${id}">—</span></div>
+    </div>
+    <div style="display:none;"><table><tbody id="clipTbody_${id}"></tbody></table></div>
+    <div class="url-input"><input type="text" id="urlInput_${id}" placeholder="https://example.com/data.txt"><button class="btn-url" id="btnUrl_${id}">🌐 Load URL</button></div>
+    <div class="btn-row">
+        <button class="btn-load" id="btnLoad_${id}">📁 Load File</button>
+        <input type="file" id="fileInput_${id}" accept=".txt,.csv,.dat" style="display:none;">
+        <button class="btn-sample" id="btnSample_${id}">Sample</button>
+        <button id="btnClear_${id}">Clear</button>
+    </div>`;
+    el('dsPanes').appendChild(pane);
+    el(`btnRaw_${id}`).addEventListener('click',()=>setDsView(id,'raw'));
+    el(`btnPrev_${id}`).addEventListener('click',()=>setDsView(id,'preview'));
+    el(`dsColor_${id}`).addEventListener('change',()=>onDsStyleChange(id));
+    el(`dsSymbol_${id}`).addEventListener('change',()=>onDsStyleChange(id));
+    el(`dsSize_${id}`).addEventListener('change',()=>onDsStyleChange(id));
+    el(`dsOpacity_${id}`).addEventListener('change',()=>onDsStyleChange(id));
+    el(`t0ref_${id}`).addEventListener('change',updateAllPanels);
+    el(`t0ref_${id}`).addEventListener('keydown',e=>{ if(e.key==='Enter') updateAllPanels(); });
+    el(`rvUnit_${id}`).addEventListener('change',()=>onDsUnitChange(id));
+    el(`clipEnabled_${id}`).addEventListener('change',()=>{ updateAllPanels(); const pv=el(`preview_${id}`); if(pv&&pv.style.display!=='none') buildDsPreview(id); });
+    el(`btnUrl_${id}`).addEventListener('click',()=>loadFromURL(id));
+    el(`btnLoad_${id}`).addEventListener('click',()=>el(`fileInput_${id}`).click());
+    el(`fileInput_${id}`).addEventListener('change',e=>loadFile(e,id));
+    el(`btnSample_${id}`).addEventListener('click',()=>loadSample(id));
+    el(`btnClear_${id}`).addEventListener('click',()=>clearDataset(id));
+    const editor=CodeMirror(el(`cm_${id}`),{value:initialText,mode:'',lineNumbers:true,lineWrapping:false,
+        placeholder:`# time [JD]    RV [${rvUnit}]    error [${rvUnit}]\n...`});
+    editor.on('change',()=>{ rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); saveToSession(); });
+    const gammaMs=opts.gammaMs!=null?opts.gammaMs:toMs(opts.gamma||0,rvUnit);
+    datasets.push({id,name,editor,rawRows:[],gamma:gammaMs,rvUnit,color:col,symbol:sym,opacity,size,t0ref});
+    renderTabs(); switchTab(id); applyThemeToEditors(); rebuildGammaUI();
+    if(initialText){ rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
+}
+function onDsStyleChange(id){
+    const ds=dsById(id); if(!ds) return;
+    const col=getDsColor(ds,dsIndex(id));
+    const hdr=el(`dsHeader_${id}`); if(hdr) hdr.style.borderLeftColor=col;
+    const tab=el(`tab_${id}`); if(tab) tab.style.borderTop=`3px solid ${col}`;
+    rebuildGammaUI(); updateAllPanels();
+}
+function onDsUnitChange(id){ rebuildGammaUI(); updateStatsBar(id); updateAllPanels(); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
+function removeDataset(id){
+    if(datasets.length<=1){ showMsg('Cannot remove the last dataset.',false); return; }
+    const idx=dsIndex(id); el(`pane_${id}`).remove(); datasets.splice(idx,1);
+    renderTabs(); switchTab(datasets[Math.min(idx,datasets.length-1)].id); rebuildGammaUI(); updateAllPanels();
+}
+
+// ── Render tabs ───────────────────────────────────────────────────────────────
+function renderTabs(){
+    const bar=el('dsTabs'); bar.innerHTML='';
+    datasets.forEach((ds,i)=>{
+        const col=getDsColor(ds,i);
+        const tab=makeEl('div',{class:'ds-tab'+(ds.id===activeId?' active':''),id:`tab_${ds.id}`,title:'Double-click to rename',style:{borderTop:`3px solid ${col}`}});
+        const lbl=makeEl('span',{class:'tab-label',text:ds.name});
+        const closeBtn=makeEl('button',{class:'close-btn',title:'Remove',text:'×',style:{display:datasets.length>1?'':'none'}});
+        closeBtn.addEventListener('click',e=>{ e.stopPropagation(); removeDataset(ds.id); });
+        tab.appendChild(lbl); tab.appendChild(closeBtn);
+        tab.addEventListener('click',()=>switchTab(ds.id));
+        tab.addEventListener('dblclick',e=>{ e.stopPropagation(); startRename(ds.id,lbl); });
+        setupDatasetDrag(tab,ds.id); bar.appendChild(tab);
+    });
+    const addBtn=makeEl('button',{class:'ds-tab-add',title:'Add dataset',text:'+'});
+    addBtn.addEventListener('click',()=>addDataset()); bar.appendChild(addBtn);
+}
+function startRename(id,labelSpan){
+    const ds=dsById(id);
+    const inp=makeEl('input',{type:'text',class:'tab-rename-input',value:ds.name,style:{width:Math.max(60,ds.name.length*9)+'px'}});
+    labelSpan.replaceWith(inp); inp.focus(); inp.select();
+    function commit(){ const n=inp.value.trim()||ds.name; ds.name=n; renderTabs(); rebuildGammaUI(); updateAllPanels(); }
+    inp.addEventListener('blur',commit);
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } if(e.key==='Escape'){ inp.value=ds.name; inp.blur(); } e.stopPropagation(); });
+    inp.addEventListener('click',e=>e.stopPropagation());
+}
+function switchTab(id){
+    activeId=id;
+    datasets.forEach(ds=>{ el(`pane_${ds.id}`).classList.toggle('active',ds.id===id); el(`tab_${ds.id}`)?.classList.toggle('active',ds.id===id); });
+    setTimeout(()=>dsById(id)?.editor.refresh(),10);
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+const isDark=()=>document.body.getAttribute('data-theme')==='dark';
+function toggleTheme(){ document.body.setAttribute('data-theme',isDark()?'light':'dark'); applyThemeToEditors(); updateAllPanels(); }
+function plotColours(){ return isDark()
+    ?{paper:'#16213e',bg:'#0d1b2a',grid:'#1f3460',zero:'#555',legendBg:'rgba(13,27,42,0.8)'}
+    :{paper:'#f4f6fb',bg:'#ffffff',grid:'#dde4f0',zero:'#aab8cc',legendBg:'rgba(255,255,255,0.85)'}; }
+function peakMarkerColor(){ return isDark()?'#ffffff':'#1a6fc4'; }
+function applyThemeToEditors(){
+    const dark=isDark(),bg=dark?'#0d1b2a':'#ffffff',gut=dark?'#0a1628':'#e8edf5',col=dark?'#eee':'#1a1a2e',gcol=dark?'#4a6080':'#999';
+    datasets.forEach(ds=>{ const w=ds.editor.getWrapperElement(); w.style.background=bg; w.style.color=col; w.querySelectorAll('.CodeMirror-gutters').forEach(g=>g.style.background=gut); w.querySelectorAll('.CodeMirror-linenumber').forEach(n=>n.style.color=gcol); });
+}
+function togglePanel(bodyId,arrowId){
+    const body=el(bodyId),arrow=el(arrowId),open=!body.classList.contains('hidden');
+    body.classList.toggle('hidden',open); arrow.classList.toggle('open',!open); arrow.classList.toggle('closed',open);
+}
+function onUseExtGLSToggle(sid){
+    if(!getChecked('useExtGLS',false)) return;
+    loadExtGLS(sid);
+}
+
+// ── Unit propagation ──────────────────────────────────────────────────────────
+function detectUnitFromHeader(text){ for(const line of text.split('\n')){ const l=line.trim(); if(!l) continue; const low=l.toLowerCase(); if(low.includes('km/s')) return 'km/s'; if(low.includes('m/s')) return 'm/s'; break; } return null; }
+function propagateUnitFromDs0(){ if(!datasets.length) return; const det=detectUnitFromHeader(datasets[0].editor.getValue()); if(!det) return; const dsEl=el(`rvUnit_${datasets[0].id}`); if(dsEl&&dsEl.value!==det) dsEl.value=det; }
+
+// ── γ_ref ─────────────────────────────────────────────────────────────────────
+function getGammaRefMs(){
+    const src=el('gammaRefSrc').value;
+    if(src==='custom') return toMs(getNumVal('gammaRefVal'),getKUnit());
+    const idx=datasets.findIndex(d=>d.id===parseInt(src));
+    return idx>=0?(getFullParamVector()[gammaOffset()+idx]||0):0;
+}
+function onGammaRefSrcChange(){
+    const src=el('gammaRefSrc').value,isCustom=src==='custom';
+    el('gammaRefVal').disabled=!isCustom;
+    if(!isCustom){ const idx=datasets.findIndex(d=>d.id===parseInt(src)); if(idx>=0) setNumVal('gammaRefVal',fromMs(getFullParamVector()[gammaOffset()+idx]||0,getKUnit()),4); }
+    updateAllPanels();
+}
+function rebuildGammaRefSelector(){
+    const sel=el('gammaRefSrc'),prev=sel.value;
+    while(sel.options.length>1) sel.remove(1);
+    datasets.forEach(ds=>sel.appendChild(makeEl('option',{value:String(ds.id),text:`γ of ${ds.name}`})));
+    const valid=[...sel.options].map(o=>o.value);
+    sel.value=valid.includes(prev)?prev:'custom'; onGammaRefSrcChange();
+}
+
+// ── γ + jitter UI ─────────────────────────────────────────────────────────────
+function rebuildGammaUI(){
+    const container=el('gammaRows');
+    container.innerHTML=''; container.className='inset-box';
+    container.style.cssText='display:flex;flex-direction:column;gap:4px;margin-bottom:6px;';
+    const KU=getKUnit();
+    datasets.forEach((ds,i)=>container.appendChild(makeGammaRowGamma(ds,i,KU)));
+    datasets.forEach((ds,i)=>container.appendChild(makeGammaRowJitter(ds,i,KU)));
+    rebuildGammaRefSelector();
+}
+function makeGammaRowGamma(ds,idx,KU){
+    const col=getDsColor(ds,idx),prevEl=el(`pGamma_${ds.id}`);
+    const gMs=prevEl?toMs(parseFloat(prevEl.value)||0,KU):(ds.gamma||0);
+    const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitGamma_${ds.id}`});
+    fitCb.checked=true; fitCb.addEventListener('change',updateAllPanels);
+    const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`γ &nbsp;${ds.name}`});
+    const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
+    inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+    const sig=makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`});
+    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col}});
+    [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
+}
+function makeGammaRowJitter(ds,idx,KU){
+    const col=getDsColor(ds,idx),prevJit=el(`pJitter_${ds.id}`);
+    const jitMs=prevJit?toMs(parseFloat(prevJit.value)||0,KU):0;
+    const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitJitter_${ds.id}`});
+    fitCb.checked=false; fitCb.addEventListener('change',updateAllPanels);
+    const lbl=makeEl('label',{for:`pJitter_${ds.id}`,html:`<em>s</em> &nbsp;${ds.name}`});
+    const inp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
+    inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+    const sig=makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`});
+    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:'.85'}});
+    [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
+}
+
+// ── Stats bar ─────────────────────────────────────────────────────────────────
+function updateStatsBar(id){
+    const d=parseDatasetRaw(id),bar=el(`statsBar_${id}`);
+    if(!d||!d.ts.length){ bar.style.display='none'; return; }
+    const ds=dsById(id),unit=getDsUnit(ds);
+    const cnt=d.ts.length,tspan=Math.max(...d.ts)-Math.min(...d.ts),sigma=std(d.rvs);
+    const medErr=median(d.errs.filter(e=>e>0)),nClip=ds.rawRows.length-cnt;
+    el(`statN_${id}`).textContent=cnt; el(`statSpan_${id}`).textContent=`${tspan.toFixed(2)} d`;
+    el(`statSigma_${id}`).textContent=`${sigma.toFixed(3)} ${unit}`;
+    el(`statMedErr_${id}`).textContent=isNaN(medErr)?'—':`${medErr.toFixed(3)} ${unit}`;
+    const ci=el(`statClipItem_${id}`);
+    if(nClip>0){ el(`statClip_${id}`).textContent=nClip; ci.style.display='flex'; } else ci.style.display='none';
+    bar.style.display='flex';
+}
+
+// ── Clip table ────────────────────────────────────────────────────────────────
+function rebuildClipTable(id){
+    const ds=dsById(id); if(!ds) return; ds.rawRows=[];
+    let ln=0;
+    for(const line of ds.editor.getValue().trim().split('\n')){
+        ln++; const l=line.trim(); if(!l||l.startsWith('#')) continue;
+        const parts=l.split(/[\s,;]+/); if(parts.length<2) continue;
+        const t=parseFloat(parts[0]),rv=parseFloat(parts[1]),er=parts.length>=3?parseFloat(parts[2]):NaN;
+        if(!isNaN(t)&&!isNaN(rv)) ds.rawRows.push({t,rv,er:(!isNaN(er)&&er>=0)?er:NaN,lineNum:ln});
+    }
+    const tbody=el(`clipTbody_${id}`); tbody.innerHTML='';
+    ds.rawRows.forEach((_,i)=>{ const tr=makeEl('tr',{id:`clipRow_${id}_${i}`}); const cb=makeEl('input',{type:'checkbox',id:`clip_${id}_${i}`}); cb.addEventListener('change',()=>onClipToggle(id,i)); tr.appendChild(makeEl('td',{},[cb])); tbody.appendChild(tr); });
+    updateStatsBar(id); updateAllPanels();
+    const pv=el(`preview_${id}`); if(pv&&pv.style.display!=='none') buildDsPreview(id);
+}
+function onClipToggle(id,i){ el(`clipRow_${id}_${i}`)?.classList.toggle('clipped',getChecked(`clip_${id}_${i}`,false)); updateAllPanels(); }
+function getClippedSet(id){ const s=new Set(); dsById(id)?.rawRows.forEach((_,i)=>{ if(getChecked(`clip_${id}_${i}`,false)) s.add(i); }); return s; }
+
+// ── Parse dataset ─────────────────────────────────────────────────────────────
+function parseDatasetRaw(id){
+    const ds=dsById(id); if(!ds||!ds.rawRows.length) return null;
+    const clippedSet=getChecked(`clipEnabled_${id}`,false)?getClippedSet(id):new Set();
+    const ts=[],rvs=[],errs=[],lineNums=[],ts_c=[],rvs_c=[],errs_c=[],lineNums_c=[];
+    ds.rawRows.forEach((row,i)=>{
+        const er=(!isNaN(row.er)&&row.er>=0)?row.er:0;
+        if(clippedSet.has(i)){ ts_c.push(row.t); rvs_c.push(row.rv); errs_c.push(er); lineNums_c.push(row.lineNum); }
+        else{ ts.push(row.t); rvs.push(row.rv); errs.push(er); lineNums.push(row.lineNum); }
+    });
+    if(!ts.length&&!ts_c.length) return null;
+    return{ts,rvs,errs,lineNums,clipped:{ts:ts_c,rvs:rvs_c,errs:errs_c,lineNums:lineNums_c}};
+}
+function parseDatasetMs(id){
+    const raw=parseDatasetRaw(id); if(!raw) return null;
+    const ds=dsById(id),t0ref=getDsT0Ref(ds),bjd0=getGlobalBJD0(),unit=getDsUnit(ds);
+    const adjT=arr=>arr.map(t=>t+t0ref-bjd0),convV=arr=>arr.map(v=>toMs(v,unit)),convE=arr=>arr.map(e=>toMs(e,unit));
+    return{ts:adjT(raw.ts),rvs:convV(raw.rvs),errs:convE(raw.errs),lineNums:raw.lineNums,
+        clipped:{ts:adjT(raw.clipped.ts),rvs:convV(raw.clipped.rvs),errs:convE(raw.clipped.errs),lineNums:raw.clipped.lineNums}};
+}
+function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ const d=parseDatasetMs(ds.id); return d&&(d.ts.length||d.clipped.ts.length)?[{...d,dsIdx:idx,dsId:ds.id}]:[]; }); }
+
+// ── RV model ──────────────────────────────────────────────────────────────────
+function solveKepler(M,e,tol=1e-9){ let E=M; for(let i=0;i<100;i++){ const dE=(M-E+e*Math.sin(E))/(1-e*Math.cos(E)); E+=dE; if(Math.abs(dE)<tol) break; } return E; }
+function keplerianRV(t,P,K,e,omega,t0){
+    if(K===0||P<=0) return 0;
+    const M=((2*Math.PI*(t-t0)/P)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+    const E=solveKepler(M,e);
+    const nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));
+    return K*(Math.cos(nu+omega)+e*Math.cos(omega));
+}
+function rvModelP(t,p,dsIdx=0){
+    rvModelCallCount++;
+    if(rvModelCallCount%1000===0) el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
+    const nPl=planets.length,gamma=p[gammaOffset()+dsIdx]||0;
+    let rv=gamma;
+    for(let i=0;i<nPl;i++){ if(planets[i].active===false) continue; rv+=keplerianRV(t,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]); }
+    return rv;
+}
+
+// ── Param vector layout ───────────────────────────────────────────────────────
+function nPlanetParams(){ return planets.length*5; }
+function gammaOffset(){ return nPlanetParams(); }
+function jitterOffset(){ return nPlanetParams()+datasets.length; }
+
+// ── Jitter parametrisation: s = jit²  ─────────────────────────────────────────
+//
+// negLogLike depends on jit² via sig2 = err² + jit², so
+// ∂L/∂jit = 2·jit · ∂L/∂(jit²) — which is identically zero at jit=0.
+// LM therefore finds no descent direction and does not iterate away from zero.
+//
+// Fix: use s = jit² as the internal free parameter (lives in ℝ, no clamping
+// needed for the sign). ∂L/∂s = Σ(err²-res²)/(2·sig2²) — informative at s=0.
+// s can go negative after an LM step; clampFull enforces s ≥ 0.
+//
+// Perturbation: if s=0 and fitJitter is active, seed s = scale(s)² so the
+// first gradient step starts away from the boundary.
+//
+// Future: negative s could encode correlated noise terms, or s=jit² could be
+// replaced by a richer covariance structure.
+//
+// Error estimate: σ(jit) = σ(s) / (2·jit)  via error propagation.
+//                 If jit≈0 after fit: jitter not significantly detected.
+
+function getJitterSq(p,dsIdx){ return Math.max(0,p[jitterOffset()+dsIdx]||0); }  // s = jit²
+
+function negLogLike(p,dd){
+    const jOff=jitterOffset(); let nll=0;
+    dd.forEach(({ts,rvs,errs,dsIdx})=>{
+        const s=Math.max(0,p[jOff+dsIdx]||0);  // s = jit²
+        ts.forEach((t,i)=>{ const res=rvs[i]-rvModelP(t,p,dsIdx); const sig2=Math.max(errs[i]**2+s,1e-20); nll+=res**2/sig2+Math.log(sig2); });
+    });
+    return nll/2;
+}
+function negLogLikeGradient(full,flags,freeScales,dd){
+    const EPS13=Math.pow(2.22e-16,1/3),g=new Float64Array(freeScales.length); let fi=0;
+    for(let j=0;j<full.length;j++){ if(!flags[j]) continue; const h=Math.max(freeScales[fi]*EPS13,1e-10); const pf=clampFull([...full]); pf[j]+=h; const pb=clampFull([...full]); pb[j]-=h; const hEff=(pf[j]-pb[j])/2||h; g[fi]=(negLogLike(pf,dd)-negLogLike(pb,dd))/(2*hEff); fi++; }
+    return g;
+}
+function negLogLikeHessian(full,flags,freeScales,dd){
+    const EPS14=Math.pow(2.22e-16,0.25),nFree=freeScales.length;
+    const H=Array.from({length:nFree},()=>new Float64Array(nFree));
+    const f0=negLogLike(clampFull(full),dd); let fi=0;
+    for(let j=0;j<full.length;j++){
+        if(!flags[j]) continue;
+        const hj=Math.max(freeScales[fi]*EPS14,1e-8); let fk=0;
+        for(let k=0;k<full.length;k++){
+            if(!flags[k]) continue;
+            if(fk<fi){ H[fi][fk]=H[fk][fi]; fk++; continue; }
+            if(fi===fk){ const pf=clampFull([...full]); pf[j]+=hj; const pb=clampFull([...full]); pb[j]-=hj; H[fi][fi]=(negLogLike(pf,dd)-2*f0+negLogLike(pb,dd))/(hj*hj); }
+            else{ const hk=Math.max(freeScales[fk]*EPS14,1e-8); const ppp=clampFull([...full]); ppp[j]+=hj; ppp[k]+=hk; const ppm=clampFull([...full]); ppm[j]+=hj; ppm[k]-=hk; const pmp=clampFull([...full]); pmp[j]-=hj; pmp[k]+=hk; const pmm=clampFull([...full]); pmm[j]-=hj; pmm[k]-=hk; H[fi][fk]=H[fk][fi]=(negLogLike(ppp,dd)-negLogLike(ppm,dd)-negLogLike(pmp,dd)+negLogLike(pmm,dd))/(4*hj*hk); }
+            fk++;
+        }
+        fi++;
+    }
+    return H;
+}
+function getFreeFlags(){
+    const f=[];
+    planets.forEach(pl=>{
+        const active=pl.active!==false;
+        const fitFlag=(key)=>{
+            if(_planetView==='table') return active&&(pl[`fit${key.charAt(0).toUpperCase()+key.slice(1)}`]??true);
+            return active&&getChecked(`fit${key.charAt(0).toUpperCase()+key.slice(1)}_${pl.pid}`);
+        };
+        ['P','K','e','omega','t0'].forEach(k=>f.push(fitFlag(k)));
+    });
+    datasets.forEach(ds=>f.push(getChecked(`fitGamma_${ds.id}`)));
+    datasets.forEach(ds=>f.push(getChecked(`fitJitter_${ds.id}`,false)));
+    return f;
+}
+const compressParams=(full,flags)=>full.filter((_,j)=>flags[j]);
+function expandParams(free,full0,flags){ const full=[...full0]; let fi=0; for(let j=0;j<full.length;j++) if(flags[j]) full[j]=free[fi++]; return full; }
+function clampFull(p){
+    const q=[...p];
+    planets.forEach((_,i)=>q[i*5+2]=Math.max(0,Math.min(0.99,q[i*5+2])));
+    // clamp s = jit² ≥ 0
+    datasets.forEach((_,i)=>q[jitterOffset()+i]=Math.max(0,q[jitterOffset()+i]||0));
+    return q;
+}
+function getFullParamVector(){
+    if(_planetView==='table') planets.forEach(pl=>syncTableToDOM(pl.pid));
+    const KU=getKUnit(),p=[];
+    planets.forEach(pl=>{ p.push(getNumVal(`pP_${pl.pid}`,10)); p.push(toMs(getNumVal(`pK_${pl.pid}`),KU)); p.push(getNumVal(`pE_${pl.pid}`)); p.push(getNumVal(`pOmega_${pl.pid}`)*Math.PI/180); p.push(getNumVal(`pT0_${pl.pid}`)); });
+    datasets.forEach(ds=>p.push(toMs(getNumVal(`pGamma_${ds.id}`),getKUnit())));
+    // store s = jit² internally
+    datasets.forEach(ds=>{ const jit=toMs(Math.max(0,getNumVal(`pJitter_${ds.id}`)),getKUnit()); p.push(jit*jit); });
+    return p;
+}
+function setFullParamVector(p){
+    const KU=getKUnit();
+    planets.forEach((pl,i)=>{ const b=i*5; setNumVal(`pP_${pl.pid}`,p[b],6); setNumVal(`pK_${pl.pid}`,fromMs(p[b+1],KU),4); setNumVal(`pE_${pl.pid}`,p[b+2],6); setNumVal(`pOmega_${pl.pid}`,p[b+3]*180/Math.PI,2); setNumVal(`pT0_${pl.pid}`,p[b+4],4); pl.P=p[b]; pl.K_ms=p[b+1]; pl.e=p[b+2]; pl.omega_deg=p[b+3]*180/Math.PI; pl.t0=p[b+4]; });
+    const gStart=gammaOffset(),jStart=jitterOffset();
+    datasets.forEach((ds,idx)=>{
+        setNumVal(`pGamma_${ds.id}`,fromMs(p[gStart+idx]||0,getKUnit()),4);
+        // convert s = jit² back to jit = √s for display
+        const jit=Math.sqrt(Math.max(0,p[jStart+idx]||0));
+        setNumVal(`pJitter_${ds.id}`,fromMs(jit,getKUnit()),4);
+    });
+    rebuildGammaRefSelector();
+    if(_planetView==='table') planets.forEach(pl=>syncDOMToTable(pl.pid));
+}
+function rvStdFromData(dd){ const all=dd.flatMap(d=>d.rvs); return all.length?std(all)||10:10; }
+function paramScales(p,dd,rvStd){
+    let tspan=0; dd.forEach(d=>{ const sp=Math.max(...d.ts)-Math.min(...d.ts); if(sp>tspan) tspan=sp; });
+    const scales=[];
+    planets.forEach((_,i)=>{ const P=p[i*5],dP=P*P/Math.max(tspan,P*.5); scales.push(Math.max(dP,1e-4),Math.max(rvStd,.1),1.0,2*Math.PI,Math.max(P,1e-3)); });
+    dd.forEach(()=>scales.push(Math.max(rvStd,.1)));
+    // scale for s = jit²: use (rvStd)²
+    dd.forEach(()=>scales.push(Math.max(rvStd**2*.01,1e-4)));
+    return{scales,steps:scales.map(s=>s*.1)};
+}
+function fixKSign(p){ const q=[...p]; let flipped=false; planets.forEach((_,i)=>{ if(q[i*5+1]<0){ q[i*5+1]=-q[i*5+1]; q[i*5+3]=(q[i*5+3]+Math.PI+2*Math.PI)%(2*Math.PI); flipped=true; } }); return{p:q,flipped}; }
+
+// ── Solvers ───────────────────────────────────────────────────────────────────
+function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-10,lambda0=1e-3,lambdaUp=10,lambdaDn=0.1}={}){
+    const flags=getFreeFlags(),rvStd=rvStdFromData(dd);
+    const{scales}=paramScales(initFull,dd,rvStd),freeScales=scales.filter((_,j)=>flags[j]);
+    const obj=full=>negLogLike(clampFull(full),dd);
+    let full=clampFull([...initFull]),lam=lambda0,c=obj(full),lastH=null;
+    for(let iter=0;iter<maxIter;iter++){
+        const g=negLogLikeGradient(full,flags,freeScales,dd);
+        const H=negLogLikeHessian(full,flags,freeScales,dd);
+        const diag=H.map((row,j)=>Math.abs(row[j])||1);
+        const A=H.map((row,j)=>{ const a=Array.from(row); a[j]+=lam*diag[j]; return a; });
+        const dp=solveLinear(A,Array.from(g).map(v=>-v));
+        if(!dp){ lam=Math.min(lam*lambdaUp,1e12); continue; }
+        const fullNew=clampFull([...full]); let fi=0;
+        for(let j=0;j<full.length;j++) if(flags[j]) fullNew[j]+=dp[fi++];
+        const cNew=obj(fullNew);
+        if(cNew<c){ full=fullNew; c=cNew; lam=Math.max(lam*lambdaDn,1e-14); lastH=H; const sn=Math.sqrt(dp.reduce((s,v)=>s+v*v,0)),pn=Math.sqrt(full.reduce((s,v)=>s+v*v,1)); if(sn/pn<tol) break; }
+        else{ lam=Math.min(lam*lambdaUp,1e12); if(lam>1e11) break; }
+    }
+    full._hessian=lastH; return clampFull(full);
+}
+function nelderMead(initFull,dd,maxIter=30000){
+    const flags=getFreeFlags(),full0=[...initFull];
+    const{steps}=paramScales(initFull,dd,rvStdFromData(dd));
+    const freeSteps=steps.filter((_,j)=>flags[j]),nFree=freeSteps.length;
+    const f=free=>negLogLike(clampFull(expandParams(free,full0,flags)),dd);
+    const x0=compressParams(initFull,flags);
+    let sx=[x0.slice()]; for(let i=0;i<nFree;i++){ const v=x0.slice(); v[i]+=freeSteps[i]; sx.push(v); } let sv=sx.map(f);
+    const[al,gm,rh,sg]=[1,2,.5,.5];
+    for(let it=0;it<maxIter;it++){
+        const ord=sv.map((_,i)=>i).sort((a,b)=>sv[a]-sv[b]); sx=ord.map(i=>sx[i]); sv=ord.map(i=>sv[i]);
+        if(sv[0]<1e-14) break;
+        const cen=Array(nFree).fill(0).map((_,j)=>sx.slice(0,nFree).reduce((s,p)=>s+p[j],0)/nFree);
+        const ref=cen.map((c,j)=>c+al*(c-sx[nFree][j])),fr=f(ref);
+        if(fr<sv[0]){ const ex=cen.map((c,j)=>c+gm*(ref[j]-c)),fe=f(ex); sx[nFree]=fe<fr?ex:ref; sv[nFree]=fe<fr?fe:fr; }
+        else if(fr<sv[nFree-1]){ sx[nFree]=ref; sv[nFree]=fr; }
+        else{ const co=cen.map((c,j)=>c+rh*(sx[nFree][j]-c)),fc=f(co); if(fc<sv[nFree]){ sx[nFree]=co; sv[nFree]=fc; } else for(let i=1;i<=nFree;i++){ sx[i]=sx[0].map((x,j)=>x+sg*(sx[i][j]-x)); sv[i]=f(sx[i]); } }
+    }
+    return clampFull(expandParams(sx[0],full0,flags));
+}
+function diffEvol(initFull,dd,{popSize=15,maxGen=2000,F=0.8,CR=0.9,tol=1e-10}={}){
+    const flags=getFreeFlags(),full0=[...initFull],rvStd=rvStdFromData(dd);
+    const{scales}=paramScales(initFull,dd,rvStd);
+    const freeScales=scales.filter((_,j)=>flags[j]),nFree=freeScales.length,NP=Math.max(popSize,nFree*4);
+    const loFull=full0.map((v,j)=>{ const s=scales[j]||rvStd; if(j%5===2)return 0; if(j%5===3)return 0; return v-3*s; });
+    const hiFull=full0.map((v,j)=>{ const s=scales[j]||rvStd; if(j%5===2)return 0.99; if(j%5===3)return 2*Math.PI; return v+3*s; });
+    const lo=loFull.filter((_,j)=>flags[j]),hi=hiFull.filter((_,j)=>flags[j]);
+    const x0=compressParams(initFull,flags);
+    const f=free=>negLogLike(clampFull(expandParams(free,full0,flags)),dd);
+    const cl=v=>v.map((x,i)=>Math.max(lo[i],Math.min(hi[i],x)));
+    let pop=Array.from({length:NP},(_,i)=>i===0?cl(x0.slice()):cl(lo.map((l,j)=>l+(hi[j]-l)*Math.random())));
+    let fit=pop.map(f);
+    for(let gen=0;gen<maxGen;gen++){
+        let improved=false;
+        for(let i=0;i<NP;i++){
+            let a,b,c; do{a=Math.floor(Math.random()*NP);}while(a===i); do{b=Math.floor(Math.random()*NP);}while(b===i||b===a); do{c=Math.floor(Math.random()*NP);}while(c===i||c===a||c===b);
+            const mutant=cl(pop[a].map((v,j)=>v+F*(pop[b][j]-pop[c][j])));
+            const jRand=Math.floor(Math.random()*nFree);
+            const trial=cl(pop[i].map((v,j)=>(Math.random()<CR||j===jRand)?mutant[j]:v));
+            const ft=f(trial); if(ft<=fit[i]){ pop[i]=trial; fit[i]=ft; improved=true; }
+        }
+        if(gen%50===0){ const best=Math.min(...fit),worst=Math.max(...fit); if((worst-best)<tol) break; }
+        if(!improved&&gen>100) break;
+    }
+    return clampFull(expandParams(pop[fit.indexOf(Math.min(...fit))],full0,flags));
+}
+function solveLinear(A,b){
+    const n=b.length,M=A.map((row,i)=>[...row,b[i]]);
+    for(let col=0;col<n;col++){
+        let maxRow=col,maxVal=Math.abs(M[col][col]);
+        for(let row=col+1;row<n;row++) if(Math.abs(M[row][col])>maxVal){ maxVal=Math.abs(M[row][col]); maxRow=row; }
+        [M[col],M[maxRow]]=[M[maxRow],M[col]];
+        if(Math.abs(M[col][col])<1e-14) return null;
+        const sc=M[col][col]; for(let k=col;k<=n;k++) M[col][k]/=sc;
+        for(let row=0;row<n;row++){ if(row===col) continue; const fac=M[row][col]; for(let k=col;k<=n;k++) M[row][k]-=fac*M[col][k]; }
+    }
+    return M.map(row=>row[n]);
+}
+function runFit(initFull,dd,algo){
+    const MAX_ITER=3; let p=initFull;
+    for(let iter=0;iter<MAX_ITER;iter++){
+        const raw=algo==='lm'?levenbergMarquardt(p,dd):algo==='nelder-mead'?nelderMead(p,dd):diffEvol(p,dd);
+        const{p:fixed,flipped}=fixKSign(raw); p=fixed; if(!flipped) break;
+    }
+    return p;
+}
+
+// ── Error estimation ──────────────────────────────────────────────────────────
+function estimateErrors(bestFull,dd){
+    const flags=getFreeFlags(),nFull=bestFull.length;
+    const residuals=dd.flatMap(({ts,rvs,dsIdx})=>ts.map((t,i)=>rvs[i]-rvModelP(t,bestFull,dsIdx)));
+    const resStd=std(residuals)||1;
+    const{scales}=paramScales(bestFull,dd,resStd),freeScales=scales.filter((_,j)=>flags[j]);
+    let H=bestFull._hessian||null; if(!H) H=negLogLikeHessian(bestFull,flags,freeScales,dd);
+    const inv=invertMatrix(Array.from(H,r=>Array.from(r))); if(!inv) return null;
+    const sigmasFree=inv.map((row,j)=>Math.sqrt(Math.max(0,row[j])));
+    const sigmasFull=new Float64Array(nFull); let fi=0;
+    for(let j=0;j<nFull;j++) if(flags[j]) sigmasFull[j]=sigmasFree[fi++];
+    // convert σ(s) → σ(jit) = σ(s) / (2·jit)  via error propagation
+    // sigmasFull[jitterOffset+idx] is σ(s); convert to σ(jit) for display
+    const jStart=jitterOffset();
+    datasets.forEach((_,idx)=>{
+        const s=Math.max(0,bestFull[jStart+idx]||0);
+        const jit=Math.sqrt(s);
+        const sigS=sigmasFull[jStart+idx];
+        sigmasFull[jStart+idx]= jit>1e-10 ? sigS/(2*jit) : 0;
+    });
+    const{chi2red,dof}=computeFitStats(bestFull,dd);
+    return{sigmasFull,chi2red,dof};
+}
+function invertMatrix(A){
+    const n=A.length,M=A.map((row,i)=>[...row,...Array(n).fill(0).map((_,j)=>i===j?1:0)]);
+    for(let col=0;col<n;col++){
+        let maxRow=col,maxVal=Math.abs(M[col][col]);
+        for(let row=col+1;row<n;row++) if(Math.abs(M[row][col])>maxVal){ maxVal=Math.abs(M[row][col]); maxRow=row; }
+        [M[col],M[maxRow]]=[M[maxRow],M[col]];
+        if(Math.abs(M[col][col])<1e-14) return null;
+        const sc=M[col][col]; for(let k=0;k<2*n;k++) M[col][k]/=sc;
+        for(let row=0;row<n;row++){ if(row===col) continue; const fac=M[row][col]; for(let k=0;k<2*n;k++) M[row][k]-=fac*M[col][k]; }
+    }
+    return M.map(row=>row.slice(n));
+}
+function displayErrors(sigmas){
+    const KU=getKUnit();
+    const fmt=(v,isRV,isOmega)=>{ if(!v||!isFinite(v)) return ''; if(isOmega) return `±${fmtSig3(v*180/Math.PI)}°`; if(isRV) return `±${fmtSig3(fromMs(v,KU))}`; return `±${fmtSig3(v)}`; };
+    planets.forEach((pl,i)=>{ const b=i*5; [['sigP',0,false,false],['sigK',1,true,false],['sigE',2,false,false],['sigOmega',3,false,true],['sigT0',4,false,false]].forEach(([pfx,k,isRV,isOmega])=>{ const e2=el(`${pfx}_${pl.pid}`); if(e2) e2.textContent=fmt(sigmas[b+k],isRV,isOmega); }); });
+    const gStart=gammaOffset(),jStart=jitterOffset();
+    datasets.forEach((ds,idx)=>{
+        const e2=el(`sigGamma_${ds.id}`),sig=sigmas[gStart+idx]; if(e2) e2.textContent=(sig&&isFinite(sig))?`±${fmtSig3(fromMs(sig,getKUnit()))}`:'';
+        const e3=el(`sigJitter_${ds.id}`),sigJ=sigmas[jStart+idx]; if(e3) e3.textContent=(sigJ&&isFinite(sigJ)&&sigJ>0)?`±${fmtSig3(fromMs(sigJ,getKUnit()))}`:'';
+    });
+    if(_planetView==='table') updateTableErrors(sigmas);
+}
+function clearErrors(){
+    _lastSigmasFull=null;
+    planets.forEach(pl=>['sigP','sigK','sigE','sigOmega','sigT0'].forEach(pfx=>{ const e2=el(`${pfx}_${pl.pid}`); if(e2) e2.textContent=''; }));
+    datasets.forEach(ds=>{ const e2=el(`sigGamma_${ds.id}`); if(e2) e2.textContent=''; const e3=el(`sigJitter_${ds.id}`); if(e3) e3.textContent=''; });
+    if(_planetView==='table') planets.forEach(pl=>{ ['P','K','e','omega','t0'].forEach(k=>{ const s=el(`ptSig_${k}_${pl.pid}`); if(s) s.textContent=''; }); });
+}
+
+// ── Fit stats ─────────────────────────────────────────────────────────────────
+function computeFitStats(p,dd){
+    const nTot=getFreeFlags().filter(Boolean).length;
+    let chi2=0,wsum=0,rss=0,n=0; const perDs={};
+    dd.forEach(({ts,rvs,errs,dsIdx})=>{
+        if(!perDs[dsIdx]) perDs[dsIdx]={rss:0,chi2:0,wsum:0,n:0};
+        const s=getJitterSq(p,dsIdx);  // s = jit²
+        ts.forEach((t,i)=>{ const res=rvs[i]-rvModelP(t,p,dsIdx); const sig2=Math.max(errs[i]**2+s,1e-20),chi2i=res**2/sig2; chi2+=chi2i; wsum+=1/sig2; rss+=res*res; n++; perDs[dsIdx].rss+=res*res; perDs[dsIdx].chi2+=chi2i; perDs[dsIdx].wsum+=1/sig2; perDs[dsIdx].n++; });
+    });
+    const dof=Math.max(n-nTot,1);
+    return{rms:Math.sqrt(rss/Math.max(n,1)),wrms:Math.sqrt(chi2/Math.max(wsum,1e-100)),chi2,chi2red:chi2/dof,n,dof,perDs};
+}
+function displayFitStats(p,dd){
+    const KU=getKUnit(),{rms,wrms,chi2,chi2red,dof,perDs}=computeFitStats(p,dd);
+    const nTot=getFreeFlags().filter(Boolean).length;
+    const container=el('fitStatsTable'); container.innerHTML='';
+    const table=makeEl('table',{class:'fit-table'});
+    const thead=makeEl('thead'); thead.innerHTML=`<tr><th></th><th>RMS</th><th>wRMS</th><th>χ²</th><th>χ²<sub>red</sub></th></tr>`;
+    table.appendChild(thead); const tbody=makeEl('tbody');
+    if(dd.length>1){ dd.forEach(({dsIdx})=>{ const ds=datasets[dsIdx]; if(!ds) return; const col=getDsColor(ds,dsIdx),pd=perDs[dsIdx]; if(!pd) return; const rmsDs=fromMs(Math.sqrt(pd.rss/Math.max(pd.n,1)),KU),wrmsDs=fromMs(Math.sqrt(pd.chi2/Math.max(pd.wsum,1e-100)),KU); const nParamsDs=Math.round(nTot*pd.n/Math.max(dd.reduce((s,d)=>s+d.ts.length,0),1)),dofDs=Math.max(pd.n-nParamsDs,1); const tr=makeEl('tr'); tr.innerHTML=`<td><span style="color:${col};">▪</span> ${ds.name}</td><td>${fmtSig3(rmsDs)}</td><td>${fmtSig3(wrmsDs)}</td><td>${pd.chi2.toFixed(1)}</td><td>${(pd.chi2/dofDs).toFixed(3)}</td>`; tbody.appendChild(tr); }); }
+    const trTot=makeEl('tr',{class:'total-row'});
+    trTot.innerHTML=`<td>${dd.length>1?'all':datasets[dd[0]?.dsIdx]?.name||'all'}</td><td>${fmtSig3(fromMs(rms,KU))} ${KU}</td><td>${fmtSig3(fromMs(wrms,KU))} ${KU}</td><td>${chi2.toFixed(1)}</td><td>${chi2red.toFixed(3)} (${dof})</td>`;
+    tbody.appendChild(trTot); table.appendChild(tbody); container.appendChild(table);
+    return{rms,wrms,chi2,chi2red};
+}
+
+// ── Derived ───────────────────────────────────────────────────────────────────
+function massFunctionSI(K,P,e){ return P*K**3*(1-e*e)**1.5/(2*Math.PI*G); }
+function solveMsiniFixpoint(fval,Mstar,maxIter=300,tol=1e-12){ let x=Math.cbrt(fval); for(let i=0;i<maxIter;i++){ const xn=Math.cbrt(fval*(Mstar+x)**2); if(Math.abs((xn-x)/(xn+1e-30))<tol){x=xn;break;} x=xn; } return x; }
+function semiMajorAxisSini(K,P,e){ return K*P*Math.sqrt(1-e*e)/(2*Math.PI)/AU; }
+function msiniWithError(K,P_days,e,sigK,sigP_days,sigE,Mstar_kg,sigMstar_kg){
+    if(K<=0||P_days<=0) return{msini:0,sigma:0};
+    const P=P_days*DAY,e2=1-e*e,fval=massFunctionSI(K,P,e),m=solveMsiniFixpoint(fval,Mstar_kg);
+    const MpM=Mstar_kg+m,C=MpM*MpM*MpM/(m*m*(3*Mstar_kg+m));
+    const dmdK=C*(3*fval/K),dmdP=C*(fval/P),dmdE=C*(-3*e*fval/e2),dmdMs=2*m/(3*Mstar_kg+m);
+    const sigma=Math.sqrt((dmdK*sigK)**2+(dmdP*sigP_days*DAY)**2+(dmdE*sigE)**2+(dmdMs*sigMstar_kg)**2);
+    return{msini:m,sigma};
+}
+function updateDerived(){
+    if(!planets.length) return;
+    const p=getFullParamVector(),Mstar_kg=getNumVal('starMass',1)*MSUN,sigMs_kg=getNumVal('starMassSig',0)*MSUN;
+    const unit=el('msiniUnit').value,div=unit==='Mjup'?MJUP:unit==='Mear'?MEAR:MSUN,unitStr=unit==='Mjup'?'M♃':unit==='Mear'?'M⊕':'M☉';
+    const sigmas=_lastSigmasFull;
+    planets.forEach((pl,i)=>{
+        const massEl=el(`pMass_${pl.pid}`),smaEl=el(`pSma_${pl.pid}`);
+        const K=p[i*5+1],P_days=p[i*5],e=p[i*5+2],b=i*5;
+        const sigK=sigmas?.[b+1]||0,sigP=sigmas?.[b+0]||0,sigE=sigmas?.[b+2]||0;
+        let massStr='—',smaStr='—';
+        if(pl.active!==false&&K>0&&P_days>0){
+            try{
+                const{msini,sigma}=msiniWithError(K,P_days,e,sigK,sigP,sigE,Mstar_kg,sigMs_kg);
+                const mVal=msini/div,mSig=sigma/div;
+                massStr=(mSig>0&&isFinite(mSig))?`${fmtSig3(mVal)} ± ${fmtSig3(mSig)} ${unitStr}`:`${fmtSig3(mVal)} ${unitStr}`;
+                smaStr=`${semiMajorAxisSini(K,P_days,e).toFixed(5)} AU`;
+            }catch(err){}
+        }
+        if(massEl) massEl.textContent=massStr;
+        if(smaEl)  smaEl.textContent=smaStr;
+    });
+    if(_planetView==='table') updateTableDerived();
+}
+
+// ── Auto guess ────────────────────────────────────────────────────────────────
+function autoGuess(){
+    const dd=buildDatasetsData(); if(!dd.length){ showMsg('Need data.',false); return; }
+    const tArr=dd.flatMap(d=>d.ts),rvArr=dd.flatMap(d=>d.rvs);
+    const rvMax=Math.max(...rvArr),rvMin=Math.min(...rvArr),KU=getKUnit();
+    if(planets.length>0){ const pid=planets[0].pid; setNumVal(`pP_${pid}`,(Math.max(...tArr)-Math.min(...tArr))/2||10,4); setNumVal(`pK_${pid}`,fromMs((rvMax-rvMin)/2,KU),4); setNumVal(`pE_${pid}`,0,2); setNumVal(`pOmega_${pid}`,0,2); setNumVal(`pT0_${pid}`,tArr[rvArr.indexOf(rvMax)],4); planets[0].P=getNumVal(`pP_${planets[0].pid}`); planets[0].K_ms=toMs(getNumVal(`pK_${planets[0].pid}`),KU); if(_planetView==='table') syncDOMToTable(planets[0].pid); }
+    dd.forEach(({rvs,dsIdx})=>setNumVal(`pGamma_${datasets[dsIdx].id}`,fromMs(mean(rvs),KU),4));
+    clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)); showMsg('Auto-guess applied — click Fit.',true);
+}
+function saveUndoSnapshot(){ undoSnapshot=[...getFullParamVector()]; el('undoBtn').disabled=false; }
+function undoFit(){ if(!undoSnapshot){ showMsg('Nothing to undo.',false); return; } setFullParamVector(undoSnapshot); undoSnapshot=null; el('undoBtn').disabled=true; clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)); showMsg('Fit undone.',true); }
+function resetCallCount(){ rvModelCallCount=0; el('rvModelCallCount').textContent='0'; }
+function timeColor(t,mn,mx){ const f=mx>mn?(t-mn)/(mx-mn):0; return `rgb(${Math.round(f<.5?30+f*2*140:170+(f-.5)*2*85)},${Math.round(f<.5?20+f*2*200:220-(f-.5)*2*30)},${Math.round(f<.5?180-f*2*140:40-(f-.5)*2*10)})`; }
+
+// ── makeScatterTrace ──────────────────────────────────────────────────────────
+function makeScatterTrace(xD,yD,errsD,lineNums,name,marker,KU,opts={}){
+    const hasErr=errsD.some(e=>e>0);
+    const eY=hasErr?{type:'data',array:errsD.map(e=>e>0?e:null),visible:true,color:marker.color,thickness:1.5,width:2}:undefined;
+    return{x:xD,y:yD,mode:'markers',type:'scatter',name,marker,error_y:eY,opacity:marker.opacity??1,
+        customdata:lineNums,hovertemplate:`%{customdata}:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`,...opts};
+}
+
+// ── Build traces ──────────────────────────────────────────────────────────────
+function buildTraces(p,foldPid,P,slot){
+    const trRV=[],trRes=[],dd=buildDatasetsData();
+    const colorByTime=slot.colorByTime,showClipped=slot.showClipped;
+    const clippedStyle=slot.clippedStyle,showDate=slot.showAsDate;
+    const plotUnit=getKUnit(),gamRef=getGammaRefMs(),bjd0=getGlobalBJD0(),fold=foldPid!==null,KU=plotUnit;
+    if(!dd.length){
+        if(planets.some(pl=>pl.active!==false)){ const ta=Array.from({length:500},(_,i)=>i/500*(P||10)*2); trRV.push({x:showDate?ta.map(t=>jdToIso(t+bjd0)):ta,y:ta.map(t=>fromMs(rvModelP(t,p,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); }
+        trRes.push({x:[0,Math.max(P||10,100)],y:[0,0],mode:'lines',type:'scatter',showlegend:false,line:{color:'#555',width:1,dash:'dash'}});
+        return{trRV,trRes};
+    }
+    const allTsRaw=dd.flatMap(d=>d.ts),allX=allTsRaw.map(t=>fold&&P>0?((t%P)+P)%P:t);
+    let xMn=Math.min(...allX),xMx=Math.max(...allX);
+    if(!fold){ const sp=xMx-xMn; xMn-=sp*.05; xMx+=sp*.05; }
+    const activePlanets=planets.filter(pl=>pl.active!==false);
+    if(activePlanets.length>0){
+        const xC=Array.from({length:600},(_,i)=>fold?i/600*P:xMn+(xMx-xMn)*i/600);
+        const xCplot=showDate&&!fold?xC.map(t=>jdToIso(t+bjd0)):xC;
+        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2}}); }
+        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=planetColor(i); const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:'legendonly',line:{color:col,width:1.5,dash:'dot'}}); }); } }
+    }
+    const tMinG=Math.min(...allTsRaw),tMaxG=Math.max(...allTsRaw);
+    const pOrbitRef=[...p]; pOrbitRef[gammaOffset()]=gamRef;
+    function makePFold(){ const pf=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pf[i*5+1]=0; }); pf[gammaOffset()]=gamRef; return pf; }
+    const pFoldRef=fold?makePFold():null;
+    dd.forEach(({ts,rvs,errs,dsIdx,lineNums,clipped})=>{
+        const ds=datasets[dsIdx],gammaDsMs=p[gammaOffset()+dsIdx]||0,shift=gamRef-gammaDsMs;
+        const col=getDsColor(ds,dsIdx),sym=getDsSymbol(ds),opacity=getDsOpacity(ds),sz=getDsSize(ds);
+        const xD=showDate&&!fold?ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?ts.map(t=>((t%P)+P)%P):ts.slice();
+        const subtractOtherPlanets=(tsArr,vsArr)=>vsArr.map((v,i)=>{ let rv=v+shift; if(fold) planets.forEach((pl2,pi)=>{ if(pl2.active===false||pl2.pid===foldPid) return; rv-=fromMs(keplerianRV(tsArr[i],p[pi*5],p[pi*5+1],p[pi*5+2],p[pi*5+3],p[pi*5+4]),plotUnit); }); return fromMs(rv,plotUnit); });
+        const rvsD=subtractOtherPlanets(ts,rvs),errsD=errs.map(e=>fromMs(e,plotUnit));
+        const orb=ts.map(t=>fromMs(fold?rvModelP(t,pFoldRef,0):rvModelP(t,pOrbitRef,0),plotUnit));
+        const res=rvsD.map((rv,i)=>rv-orb[i]);
+        const colors=colorByTime?ts.map(t=>timeColor(t,tMinG,tMaxG)):null;
+        const mc=colorByTime?{color:colors,size:sz,symbol:sym,opacity}:{color:col,size:sz,symbol:sym,opacity};
+        const mrc=colorByTime?{color:colors,size:Math.max(4,sz-2),symbol:'diamond',opacity}:{color:col,size:Math.max(4,sz-2),symbol:'diamond',opacity};
+        trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,ds.name,mc,KU));
+        trRes.push(makeScatterTrace(xD,res,errsD,lineNums,`Res: ${ds.name}`,mrc,KU,{showlegend:false}));
+        if(showClipped&&clipped.ts.length>0){
+            const xD_c=showDate&&!fold?clipped.ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?clipped.ts.map(t=>((t%P)+P)%P):clipped.ts.slice();
+            const rvsD_c=subtractOtherPlanets(clipped.ts,clipped.rvs),errsD_c=clipped.errs.map(e=>fromMs(e,plotUnit));
+            const orb_c=clipped.ts.map(t=>fromMs(fold?rvModelP(t,pFoldRef,0):rvModelP(t,pOrbitRef,0),plotUnit));
+            const res_c=rvsD_c.map((rv,i)=>rv-orb_c[i]);
+            const mc_c={symbol:clippedStyle,color:col,size:sz,opacity:0.3,line:{width:1.5,color:col}};
+            const htc=`%{customdata} clipped:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`;
+            trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,`${ds.name} (clipped)`,mc_c,KU),showlegend:false,hovertemplate:htc});
+            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2)},KU),showlegend:false,hovertemplate:htc});
+        }
+    });
+    const xResL=showDate&&!fold?jdToIso(xMn+bjd0):xMn,xResR=showDate&&!fold?jdToIso(xMx+bjd0):xMx;
+    trRes.push({x:[xResL,xResR],y:[0,0],mode:'lines',type:'scatter',showlegend:false,line:{color:'#555',width:1,dash:'dash'}});
+    return{trRV,trRes};
+}
+
+// ── GLS builtin ───────────────────────────────────────────────────────────────
+function computeGLS_builtin(ts,rvs,errs,freqs){
+    const n=ts.length,w0=errs.map(e=>e>0?1/(e*e):1),W=w0.reduce((a,b)=>a+b,0);
+    const wi=w0.map(w=>w/W),ybar=mean(rvs),power=new Float64Array(freqs.length);
+    for(let fi=0;fi<freqs.length;fi++){
+        const omega=2*Math.PI*freqs[fi]; let C_=0,S_=0,YY=0;
+        for(let i=0;i<n;i++){ C_+=wi[i]*Math.cos(omega*ts[i]); S_+=wi[i]*Math.sin(omega*ts[i]); YY+=wi[i]*(rvs[i]-ybar)**2; }
+        let CC2=0,SS2=0,CS2=0,YC2=0,YS2=0;
+        for(let i=0;i<n;i++){ const c=Math.cos(omega*ts[i])-C_,s=Math.sin(omega*ts[i])-S_,y=rvs[i]-ybar; CC2+=wi[i]*c*c; SS2+=wi[i]*s*s; CS2+=wi[i]*c*s; YC2+=wi[i]*y*c; YS2+=wi[i]*y*s; }
+        const D=CC2*SS2-CS2*CS2; if(Math.abs(D)<1e-30||Math.abs(YY)<1e-30){ power[fi]=0; continue; }
+        power[fi]=(SS2*YC2*YC2+CC2*YS2*YS2-2*CS2*YC2*YS2)/(D*YY);
+    }
+    return power;
+}
+
+// ── Fit ───────────────────────────────────────────────────────────────────────
+function doFit(){
+    const dd=buildDatasetsData(),nFree=getFreeFlags().filter(Boolean).length;
+    if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<=nFree){ showMsg('Not enough data.',false); return; }
+    const algo=el('fitAlgo').value;
+    const algoNames={'lm':'Levenberg-Marquardt','nelder-mead':'Nelder-Mead','diff-evol':'Differential Evolution'};
+    saveUndoSnapshot(); resetCallCount(); clearErrors();
+    const nAct=planets.filter(pl=>pl.active!==false).length,nPlStr=nAct===0?'null model':`${nAct} planet(s)`;
+    showMsg(`Fitting [${nPlStr}] with ${algoNames[algo]}…`,true);
+    setFitBtnsDisabled(true);
+    // get initial param vector — will be modified before fitting
+    let initP=getFullParamVector();
+    // Perturbation for jitter: if s=0 and fitJitter active, seed s = scale(s)
+    // so the first gradient step starts away from the boundary.
+    const rvStd=rvStdFromData(dd);
+    const scaleS=Math.max(rvStd**2*.01,1e-4);
+    datasets.forEach((ds,idx)=>{
+        if(getChecked(`fitJitter_${ds.id}`,false)){
+            const s=initP[jitterOffset()+idx];
+            if(s<1e-20) initP[jitterOffset()+idx]=scaleS;
+        }
+    });
+    setTimeout(()=>{
+        try{
+            const fitted=runFit(initP,dd,algo);
+            setFullParamVector(fitted);
+            const errResult=estimateErrors(fitted,dd);
+            if(errResult){ _lastSigmasFull=errResult.sigmasFull; displayErrors(errResult.sigmasFull); }
+            updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+            const{rms,wrms,chi2,chi2red}=displayFitStats(fitted,dd);
+            const KU=getKUnit();
+            el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
+            showMsg(`✅ [${algoNames[algo]}, ${nPlStr}]  RMS=${fmtSig3(fromMs(rms,KU))} ${KU}  wRMS=${fmtSig3(fromMs(wrms,KU))} ${KU}  χ²=${chi2.toFixed(1)}  χ²_red=${chi2red.toFixed(3)}`,true);
+        }catch(err){ showMsg('❌ Fit failed: '+err.message,false); }
+        finally{ setFitBtnsDisabled(false); }
+    },50);
+}
+
+// ── Project JSON ──────────────────────────────────────────────────────────────
+function buildProjectJSON(){
+    readAllPlanetDOM();
+    const KU=getKUnit();
+    const planetsData=planets.map(pl=>({pid:pl.pid,name:pl.name,P:pl.P,K_ms:pl.K_ms,e:pl.e,omega_deg:pl.omega_deg,t0:pl.t0,fitP:pl.fitP,fitK:pl.fitK,fitE:pl.fitE,fitOmega:pl.fitOmega,fitT0:pl.fitT0,active:pl.active,glsSubtract:pl.glsSubtract??true}));
+    const p=getFullParamVector();
+    const dsData=datasets.map((ds,idx)=>({
+        name:ds.name,text:ds.editor.getValue(),t0ref:getNumVal(`t0ref_${ds.id}`),
+        rvUnit:el(`rvUnit_${ds.id}`)?.value||'m/s',
+        gammaMs:p[gammaOffset()+idx]||0,
+        // store jit = √s for JSON (user-facing value)
+        jitterMs:fromMs(Math.sqrt(Math.max(0,p[jitterOffset()+idx]||0)),KU),
+        color:getDsColor(ds,idx),symbol:getDsSymbol(ds),opacity:getDsOpacity(ds),size:getDsSize(ds),
+        fitGamma:getChecked(`fitGamma_${ds.id}`),fitJitter:getChecked(`fitJitter_${ds.id}`,false),
+        clipped:ds.rawRows.map((_,i)=>getChecked(`clip_${ds.id}_${i}`,false)),
+        clipEnabled:getChecked(`clipEnabled_${ds.id}`,false),
+    }));
+    const panelsData=panels.map(p=>{
+        if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle};
+        return{type:'gls',pMin:p.pMin,pMax:p.pMax,ofac:p.ofac,xAxis:p.xAxis,showPeriod:p.showPeriod,useExt:p.useExt,glsSubtract:p.glsSubtract||{}};
+    });
+    return{version:23,projectName:getProjectName(),KUnit:KU,planets:planetsData,
+        options:{fitAlgo:el('fitAlgo').value,msiniUnit:el('msiniUnit').value,starMass:getNumVal('starMass',1),starMassSig:getNumVal('starMassSig',0),globalBJD0:getNumVal('globalBJD0'),gammaRefSrc:el('gammaRefSrc').value,gammaRefVal:getNumVal('gammaRefVal'),activePlanetPid:activePlanetPid,planetView:_planetView,sidebarMode:document.body.classList.contains('sidebar-mode'),sidebarWidth:getSidebarWidth(),panels:panelsData},
+        datasets:dsData};
+}
+function saveProject(saveAs){
+    const proj=buildProjectJSON();
+    let filename=(!saveAs&&lastSavedFilename)?lastSavedFilename:(getProjectName().replace(/[^a-zA-Z0-9_\-. ]/g,'_').replace(/ +/g,'_')||'untitled');
+    lastSavedFilename=filename; if(!filename.endsWith('.rvproj')) filename+='.rvproj';
+    const blob=new Blob([JSON.stringify(proj,null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
+    showMsg(`✅ Saved as "${filename}"`,true);
+}
+function loadProject(event){
+    const file=event.target.files[0]; if(!file) return;
+    const r=new FileReader();
+    r.onload=e=>{ try{ const proj=JSON.parse(e.target.result); loadProjectFromObj(proj); lastSavedFilename=file.name.replace(/\.[^.]+$/,''); showMsg(`✅ Project loaded: ${file.name}`,true); }catch(err){ showMsg(`❌ Failed: ${err.message}`,false); } };
+    r.readAsText(file); event.target.value='';
+}
+function loadProjectFromObj(proj){
+    if(!proj.datasets) throw new Error('Not a valid project');
+    el('projectName').value=proj.projectName||'untitled'; updateWindowTitle();
+    planets=[]; nextPlanetId=1; activePlanetPid=null;
+    el('planetBlocks').innerHTML=''; el('planetTabBar').innerHTML=''; el('planetTable').innerHTML='';
+    el('panelSlotsContainer').innerHTML='';
+    panels=[]; nextPanelId=1;
+    Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
+    Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
+    datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
+    datasets=[]; nextId=1; activeId=null;
+    ['dsTabs','dsPanes','gammaRows'].forEach(id=>el(id).innerHTML='');
+    undoSnapshot=null; _lastSigmasFull=null;
+    el('undoBtn').disabled=true;
+    const o=proj.options||{};
+    if(o.fitAlgo) el('fitAlgo').value=o.fitAlgo;
+    if(o.msiniUnit) el('msiniUnit').value=o.msiniUnit;
+    if(o.globalBJD0!=null) el('globalBJD0').value=o.globalBJD0;
+    if(proj.KUnit) el('globalUnit').value=proj.KUnit;
+    if(o.starMass!=null) el('starMass').value=parseFloat(o.starMass).toFixed(2);
+    if(o.starMassSig!=null) el('starMassSig').value=parseFloat(o.starMassSig).toFixed(3);
+    if(o.sidebarWidth) document.documentElement.style.setProperty('--sidebar-w',o.sidebarWidth+'px');
+    const KU=proj.KUnit||'m/s';
+    (proj.planets||[]).forEach(pd=>{
+        nextPlanetId=Math.max(nextPlanetId,(pd.pid||0)+1);
+        const pl={pid:pd.pid||nextPlanetId++,name:pd.name||defaultPlanetName(planets.length),P:pd.P||10,K_ms:pd.K_ms||0,e:pd.e||0,omega_deg:pd.omega_deg||0,t0:pd.t0||0,fitP:pd.fitP??true,fitK:pd.fitK??true,fitE:pd.fitE??true,fitOmega:pd.fitOmega??true,fitT0:pd.fitT0??true,active:pd.active??true,glsSubtract:pd.glsSubtract??true};
+        planets.push(pl);
+        if(!activePlanetPid) activePlanetPid=pl.pid;
+        _buildPlanetBlock(pl,planetColor(planets.length-1),KU); writePlanetDOM(pl);
+    });
+    rebuildPlanetTabs();
+    const targetPid=planets.find(p=>p.pid===o.activePlanetPid)?.pid||planets[0]?.pid||null;
+    if(targetPid) switchPlanetTab(targetPid);
+    setPlanetView(o.planetView||'table');
+    proj.datasets.forEach(saved=>{
+        addDataset(saved.text||'',saved.name||'Dataset',{t0ref:saved.t0ref||saved.bjd0||0,rvUnit:saved.rvUnit||'m/s',gammaMs:saved.gammaMs||0,color:saved.color,symbol:saved.symbol,opacity:saved.opacity,size:saved.size});
+        const ds=datasets[datasets.length-1];
+        setNumVal(`pGamma_${ds.id}`,fromMs(saved.gammaMs??0,KU),4);
+        // jitterMs in JSON is jit; display directly
+        if(saved.jitterMs!=null) setNumVal(`pJitter_${ds.id}`,saved.jitterMs,4);
+        const fitGamEl=el(`fitGamma_${ds.id}`); if(fitGamEl&&saved.fitGamma!=null) fitGamEl.checked=saved.fitGamma;
+        const fitJitEl=el(`fitJitter_${ds.id}`); if(fitJitEl&&saved.fitJitter!=null) fitJitEl.checked=saved.fitJitter;
+        setTimeout(()=>{
+            if(saved.clipEnabled) el(`clipEnabled_${ds.id}`).checked=true;
+            (saved.clipped||[]).forEach((cl,i)=>{ if(cl){ const cb=el(`clip_${ds.id}_${i}`); if(cb){ cb.checked=true; el(`clipRow_${ds.id}_${i}`)?.classList.add('clipped'); } } });
+        },100);
+    });
+    // restore panels
+    const panelsData=o.panels||[{type:'plot'},{type:'gls'}];
+    panelsData.forEach(pd=>addPanel(pd.type,pd));
+    if(o.sidebarMode) setTimeout(()=>toggleSidebar(true),50);
+    if(o.gammaRefSrc!=null) setTimeout(()=>{ const sel=el('gammaRefSrc'); const valid=[...sel.options].map(op=>op.value); sel.value=valid.includes(String(o.gammaRefSrc))?String(o.gammaRefSrc):'custom'; setNumVal('gammaRefVal',o.gammaRefVal||0,4); onGammaRefSrcChange(); },300);
+    setTimeout(()=>updateAllPanels(),350);
+}
+
+// ── File / URL / Sample / Clear ───────────────────────────────────────────────
+function loadFile(event,id){ const file=event.target.files[0]; if(!file) return; const r=new FileReader(); r.onload=e=>{ dsById(id).editor.setValue(e.target.result); rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); showMsg(`✅ Loaded: ${file.name}`,true); }; r.readAsText(file); event.target.value=''; }
+async function loadFromURL(id){
+    const url=el(`urlInput_${id}`).value.trim(); if(!url){ showMsg('Please enter a URL.',false); return; }
+    showMsg('Loading…',true);
+    const proxies=[u=>u,u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,u=>`https://cors-anywhere.herokuapp.com/${u}`];
+    let text=null,lastErr='';
+    for(const mk of proxies){ try{ const r=await fetch(mk(url)); if(r.ok){text=await r.text();break;} else lastErr=`HTTP ${r.status}`; }catch(e){ lastErr=e.message; } }
+    if(text!==null){ dsById(id).editor.setValue(text); rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); showMsg('✅ Loaded from URL.',true); }
+    else showMsg(`❌ Failed: ${lastErr}`,false);
+}
+function loadSample(id){
+    const off=2450000,params_ms=[7.3,80,.3,45*Math.PI/180,off+1.2,10];
+    const idx=dsIndex(id),gammaMs=idx*20000,ds=datasets[idx],dsUnit=getDsUnit(ds);
+    const times=[0.3,1.1,2.0,2.9,3.5,4.2,5.0,5.8,6.7,7.5,8.3,9.1,10.0,11.2,12.0,13.1,14.3,15.0,16.2,17.5].map(t=>t+off+idx*18);
+    let txt=`# time [JD]      RV [${dsUnit}]   error [${dsUnit}]\n`;
+    times.forEach(t=>{ const rv_ms=rvModelP(t-off,params_ms,0)+gammaMs+(Math.random()-.5)*8,err_ms=2+Math.random()*4; txt+=`${t.toFixed(2)}   ${fromMs(rv_ms,dsUnit).toFixed(4)}   ${fromMs(err_ms,dsUnit).toFixed(4)}\n`; });
+    if(idx===0&&planets.length>0){ const KU=getKUnit(),pid=planets[0].pid; setNumVal(`pP_${pid}`,7.5,2); setNumVal(`pK_${pid}`,fromMs(80,KU),4); setNumVal(`pE_${pid}`,0.2,2); setNumVal(`pOmega_${pid}`,30,2); setNumVal(`pT0_${pid}`,1.0,2); planets[0].P=7.5; planets[0].K_ms=80; if(_planetView==='table') syncDOMToTable(pid); }
+    setNumVal(`t0ref_${ds.id}`,-off,0); setNumVal(`pGamma_${ds.id}`,fromMs(gammaMs,getKUnit()),4);
+    dsById(id).editor.setValue(txt); rebuildClipTable(id); if(idx===0) propagateUnitFromDs0();
+    showMsg(`Sample loaded into ${ds.name} — click Fit!`,true);
+}
+function clearDataset(id){ dsById(id).editor.setValue(''); dsById(id).rawRows=[]; el(`clipTbody_${id}`).innerHTML=''; el(`statsBar_${id}`).style.display='none'; updateAllPanels(); }
+function showMsg(msg,ok){ const e=el('statusMsg'); e.textContent=msg; e.className=ok?'msg-ok':'msg-err'; }
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function toggleSidebar(forceOn){
+    const on=forceOn!==undefined?forceOn:!document.body.classList.contains('sidebar-mode');
+    updateScrollbarWidth();
+    if(on){ document.body.appendChild(el('paramPanel')); document.body.classList.add('sidebar-mode'); }
+    else{ el('topRow').appendChild(el('paramPanel')); document.body.classList.remove('sidebar-mode'); }
+    el('btnSidebar').textContent=on?'⊲ Normal':'⊳ Sidebar';
+    el('btnSidebar').classList.toggle('active',on);
+    setTimeout(()=>resizeAllPlots(),300);
+}
+
+// ── Static event wiring ───────────────────────────────────────────────────────
+function initStaticEvents(){
+    el('btnNew').addEventListener('click',newProject);
+    el('btnSave').addEventListener('click',()=>saveProject(false));
+    el('btnSaveAs').addEventListener('click',()=>saveProject(true));
+    el('btnOpen').addEventListener('click',()=>el('projectFileInput').click());
+    el('projectFileInput').addEventListener('change',loadProject);
+    el('btnTheme').addEventListener('click',toggleTheme);
+    el('btnFit').addEventListener('click',doFit);
+    el('btnFitTop').addEventListener('click',doFit);
+    el('btnAutoGuess').addEventListener('click',autoGuess);
+    el('undoBtn').addEventListener('click',undoFit);
+    el('gammaRefSrc').addEventListener('change',onGammaRefSrcChange);
+    el('gammaRefVal').addEventListener('change',updateAllPanels);
+    el('globalUnit').addEventListener('change',()=>{ rebuildGammaUI(); updateAllPanels(); if(_planetView==='table') buildPlanetTable(); });
+    el('globalBJD0').addEventListener('change',()=>{ updateAllPanels(); updateT0Labels(); if(_planetView==='table') buildPlanetTable(); });
+    el('globalBJD0').addEventListener('keydown',e=>{ if(e.key==='Enter'){ updateAllPanels(); updateT0Labels(); } });
+    el('starMass').addEventListener('change',updateDerived);
+    el('starMass').addEventListener('keydown',e=>{ if(e.key==='Enter') updateDerived(); });
+    el('starMassSig').addEventListener('change',updateDerived);
+    el('msiniUnit').addEventListener('change',updateDerived);
+    el('dataHeader').addEventListener('click',()=>togglePanel('dataBody','dataArrow'));
+    el('paramHeader').addEventListener('click',()=>togglePanel('paramBody','paramArrow'));
+    el('projectName').addEventListener('change',updateWindowTitle);
+    el('projectName').addEventListener('input',updateWindowTitle);
+    el('btnSidebar').addEventListener('click',()=>toggleSidebar());
+    el('btnSidebarClose').addEventListener('click',()=>toggleSidebar(false));
+    el('btnPlanetViewTab').addEventListener('click',()=>setPlanetView('tabs'));
+    el('btnPlanetViewTable').addEventListener('click',()=>setPlanetView('table'));
+    el('btnAddPlot').addEventListener('click',()=>addPanel('plot'));
+    el('btnAddGLS').addEventListener('click',()=>addPanel('gls'));
+    window.addEventListener('resize',updateScrollbarWidth);
+    initSidebarResize();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.onload=()=>{
+    updateScrollbarWidth();
+    initStaticEvents();
+    el('topRow').appendChild(el('paramPanel'));
+    const restored=restoreFromSession();
+    if(!restored){
+        addPlanet(); addDataset();
+        addPanel('plot'); addPanel('gls');
+    }
+    setPlanetView(_planetView);
+    updateDerived(); updateWindowTitle();
+    setTimeout(()=>{
+        if(typeof plotlyEnableZoomPan==='function'){
+            panels.forEach(p=>{
+                try{ if(p.type==='plot'){ plotlyEnableZoomPan(el(`plotRV_${p.sid}`)); if(p.showRes) plotlyEnableZoomPan(el(`plotRes_${p.sid}`)); } else plotlyEnableZoomPan(el(`plotGLS_${p.sid}`)); }catch(e){}
+            });
+        }
+    },400);
+};
+</script>
+</body>
+</html>
