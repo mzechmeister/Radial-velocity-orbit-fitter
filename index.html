@@ -22,9 +22,7 @@
             --cm-bg:#ffffff; --cm-gutter:#e8edf5; --cm-gutter-fg:#999; --cm-cursor:#333;
             --tab-active:#d0dff5; --tab-inactive:#e8edf5;
             --legend-bg:rgba(255,255,255,0.85);
-            --sidebar-w:440px;
-            --scrollbar-w:15px;
-            --bar-h:38px;
+            --sidebar-w:440px; --scrollbar-w:15px; --bar-h:38px;
         }
         [data-theme="dark"] {
             --bg:#1a1a2e; --bg2:#16213e; --bg3:#0d1b2a; --border:#0f3460;
@@ -36,44 +34,58 @@
             --legend-bg:rgba(13,27,42,0.8);
         }
         body { font-family:Arial,sans-serif; background:var(--bg); color:var(--text); transition:background .3s,color .3s; }
+
+        /* ── fixed project bar ── */
         .project-bar {
             position:fixed; top:0; left:0; right:0; z-index:300;
-            display:flex; align-items:center; gap:6px;
+            display:flex; align-items:center; gap:4px;
             padding:4px 12px; height:var(--bar-h);
             background:var(--bg3); border-bottom:1px solid var(--border);
             font-size:13px; transition:background .3s,border-color .3s;
         }
         .app-title { font-size:15px; font-weight:bold; color:var(--accent); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; }
-        .project-bar label { white-space:nowrap; flex:0 0 auto; color:var(--text2); }
-        #projectName { flex:1; min-width:60px; padding:3px 7px; font-size:13px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
-        #projectName:focus { outline:none; border-color:var(--accent2); }
-        .project-btns { display:flex; gap:5px; align-items:center; flex:0 0 auto; }
+
+        /* projectName: styled as editable title, no label */
+        #projectName {
+            margin-left:8px;
+            font-weight:bold; font-size:14px;
+            border:none; border-bottom:1px solid var(--border);
+            border-radius:0; background:transparent;
+            color:var(--accent); padding:2px 4px;
+            flex:1; min-width:60px;
+        }
+        #projectName:focus { outline:none; border-bottom-color:var(--accent2); }
+
+        .project-btns { display:flex; gap:4px; flex:0 0 auto; align-items:center; }
+        /* Save group: margin-left for visual grouping */
+        #btnSave { margin-left:8px; }
+        /* Sidebar: margin-left to separate from save group */
+        #btnSidebar { margin-left:8px; }
+
         .project-spacer { flex:1; min-width:8px; }
         .theme-btn { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:13px; color:var(--text2); cursor:pointer; transition:background .2s; }
         .theme-btn:hover { background:var(--bg2); }
-        /* sidebar resize handle */
+
+        /* GitHub link in project bar */
+        .github-link { color:var(--text2); flex:0 0 auto; opacity:.55; transition:opacity .2s,color .2s; display:flex; align-items:center; text-decoration:none; }
+        .github-link:hover { opacity:1; color:var(--text); }
+
+        /* ── sidebar resize handle ── */
         #sidebarResizeHandle {
             display:none; position:fixed; top:var(--bar-h); bottom:0;
-            left:calc(100vw - var(--sidebar-w) - 1px);
-            width:4px; cursor:ew-resize; z-index:203;
-            background:var(--border); transition:background .2s;
+            left:calc(100vw - var(--sidebar-w) - 1px); width:4px;
+            cursor:ew-resize; z-index:203; background:var(--border); transition:background .2s;
         }
-        #sidebarResizeHandle:hover,
-        #sidebarResizeHandle.dragging { background:var(--accent2); }
+        #sidebarResizeHandle:hover, #sidebarResizeHandle.dragging { background:var(--accent2); }
         body.sidebar-mode #sidebarResizeHandle { display:block; }
         body.sidebar-mode #paramPanel { border-left:none; }
-        /* scroll containers */
+
+        /* ── scroll containers ── */
         #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
         body.sidebar-mode { overflow:hidden; height:100vh; }
-        body.sidebar-mode #leftScroll {
-            position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w);
-            overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px;
-        }
-        body.sidebar-mode #paramPanel {
-            position:fixed; right:0; top:var(--bar-h); bottom:0; width:var(--sidebar-w);
-            overflow-y:scroll; border-radius:0;
-            box-shadow:-4px 0 24px rgba(0,0,0,.35); z-index:200; margin-bottom:0;
-        }
+        body.sidebar-mode #leftScroll { position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w); overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
+        body.sidebar-mode #paramPanel { position:fixed; right:0; top:var(--bar-h); bottom:0; width:var(--sidebar-w); overflow-y:scroll; border-radius:0; box-shadow:-4px 0 24px rgba(0,0,0,.35); z-index:200; margin-bottom:0; }
+
         .container { max-width:1400px; margin:0 auto; }
         .top-row { display:flex; gap:20px; margin-bottom:20px; align-items:flex-start; }
         .panel { background:var(--bg2); border-radius:10px; padding:15px; border:1px solid var(--border); transition:background .3s,border-color .3s; margin-bottom:20px; }
@@ -86,8 +98,11 @@
         .panel-body { margin-top:12px; }
         .panel-body.hidden { display:none; }
         .data-panel { flex:1.4; min-width:0; overflow:hidden; }
+
+        /* ── dataset tabs: inactive = var(--bg2) like planet All/+ tabs ── */
         .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
-        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--tab-inactive); color:var(--text2); cursor:pointer; font-size:13px; user-select:none; transition:background .2s,color .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
+        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; color:var(--text2); cursor:pointer; font-size:13px; user-select:none; transition:background .2s,color .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
+        .ds-tab:not(.active) { background:var(--bg2); }
         .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom:1px solid var(--tab-active); }
         .ds-tab.drag-over { background:var(--accent2); opacity:.7; }
         .ds-tab .tab-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
@@ -98,8 +113,7 @@
         .ds-tab-add { padding:5px 12px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:none; color:var(--accent); cursor:pointer; font-size:17px; font-weight:bold; margin-right:3px; line-height:1; transition:background .2s; }
         .ds-tab-add:hover { background:var(--tab-inactive); }
         .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
-        .ds-pane { display:none; }
-        .ds-pane.active { display:block; }
+        .ds-pane { display:none; } .ds-pane.active { display:block; }
         .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text2); border-left:4px solid transparent; }
         .ds-header label { white-space:nowrap; }
         .ds-header input[type=number] { width:80px; padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
@@ -107,9 +121,7 @@
         .ds-header select { padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
         .ds-header input[type=range] { width:70px; accent-color:var(--accent2); }
         .data-stats-bar { margin-top:6px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
-        .stat-item { display:flex; gap:5px; }
-        .stat-label { color:var(--accent); }
-        .stat-val { color:var(--cyan); }
+        .stat-item { display:flex; gap:5px; } .stat-label { color:var(--accent); } .stat-val { color:var(--cyan); }
         .view-toggle { display:flex; align-items:center; gap:0; margin-bottom:4px; }
         .view-toggle button { padding:3px 10px; font-size:12px; border:1px solid var(--border); background:var(--bg3); color:var(--text2); cursor:pointer; font-weight:normal; }
         .view-toggle button:first-child { border-radius:4px 0 0 4px; }
@@ -136,6 +148,8 @@
         select { padding:4px 8px; font-size:13px; }
         .url-input { display:flex; align-items:center; gap:6px; width:100%; margin-top:6px; }
         .url-input input[type=text] { flex:1; padding:4px 6px; font-size:13px; }
+
+        /* ── param panel ── */
         .param-panel { flex:0 0 540px; position:relative; }
         .param-list { display:flex; flex-direction:column; gap:6px; }
         .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
@@ -154,7 +168,7 @@
         .planet-derived span.d-val { font-size:12px; color:var(--val); font-family:monospace; }
         .section-sep { height:1px; background:var(--border); margin:3px 0; }
         .stats-group { display:flex; flex-direction:column; gap:3px; }
-        .stats-group-title { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; opacity:.8; }
+        .stats-group-title { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; opacity:.8; }
         .fit-table { width:100%; border-collapse:collapse; font-size:12px; }
         .fit-table th { text-align:right; padding:2px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:11px; }
         .fit-table th:first-child { text-align:left; }
@@ -162,11 +176,15 @@
         .fit-table td:first-child { text-align:left; color:var(--text2); font-family:Arial,sans-serif; }
         .fit-table tr.total-row td { color:var(--val2); border-top:1px solid var(--border); font-weight:bold; }
         .fit-table tr:hover td { background:var(--bg2); }
-        /* planet tab bar */
+
+        /* ── planet tab bar ── */
         .planet-tab-bar { display:flex; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; margin-bottom:0; }
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-        .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--tab-inactive); color:var(--text2); cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; }
+
+        /* planet tabs: inactive = var(--bg2), same as All/+ */
+        .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
+        .planet-tab:not(.active) { background:var(--bg2); }
         .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
         .planet-tab.tab-drag-over { border-top:3px solid var(--accent2); background:var(--tab-active); }
         #ptab_all { position:sticky; left:0; background:var(--bg2); z-index:2; }
@@ -174,25 +192,25 @@
         .planet-tab-add { padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--bg2); color:var(--accent); cursor:pointer; font-size:16px; line-height:1; transition:background .15s; flex-shrink:0; position:sticky; right:0; z-index:2; }
         .planet-tab-add:hover { background:var(--bg3); }
         .planet-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--bg3); padding:8px; }
-        .planet-block { display:none; margin-bottom:6px; }
-        .planet-block.active { display:block; }
-        .planet-block.inactive { opacity:.45; }
+        .planet-block { display:none; margin-bottom:6px; } .planet-block.active { display:block; } .planet-block.inactive { opacity:.45; }
         .planet-header { display:flex; align-items:center; gap:6px; user-select:none; margin-bottom:8px; }
         .planet-name-input { font-size:13px; font-weight:bold; background:none; border:none; border-bottom:1px solid transparent; color:inherit; width:100px; cursor:text; outline:none; padding:0; }
         .planet-name-input:focus { border-bottom-color:var(--accent2); background:var(--input-bg); }
         .planet-body { display:flex; flex-direction:column; gap:6px; }
         .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
-        .planet-ctrl:hover { opacity:1; }
-        .planet-ctrl.del:hover { color:#f72585; }
+        .planet-ctrl:hover { opacity:1; } .planet-ctrl.del:hover { color:#f72585; }
         .gamma-row { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; border-left:3px solid transparent; padding-left:5px; }
         .gamma-row label { font-size:13px; color:var(--text2); text-align:right; }
         .gamma-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .gamma-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
         .gamma-sigma { font-size:11px; color:var(--text2); font-family:monospace; }
-        .bjd0-row,.starmass-row,.gamma-ref-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
+
+        /* ── shared grid rows ── */
+        .bjd0-row,.starmass-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row { grid-template-columns:160px 90px auto auto; }
         .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
-        .gamma-ref-row { grid-template-columns:160px 90px auto auto; border:1px solid var(--border); border-radius:6px; padding:6px 8px; background:transparent; }
+        /* gamma-ref-row: grid only, no standalone border (inside inset-box now) */
+        .gamma-ref-row { display:grid; grid-template-columns:160px 90px auto auto; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { font-size:13px; color:var(--text2); text-align:right; }
         .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .bjd0-row input[type=number]:focus,.starmass-row input[type=number]:focus,.gamma-ref-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
@@ -216,43 +234,42 @@
         .btn-fit-top:disabled::before { content:'⏳ Fitting…'; animation:fitbtn 1s step-start infinite; }
         .btn-undo { background:#888; color:#fff; padding:8px 12px; }
         .btn-undo:disabled { opacity:.35; cursor:not-allowed; filter:none; }
-        .btn-new    { background:#e9c46a; color:#000; }
-        .btn-sample { background:#7209b7; color:#fff; }
-        .btn-auto   { background:#3a86ff; color:#fff; }
-        .btn-load   { background:#06d6a0; color:#000; }
-        .btn-url    { background:#fb8500; color:#000; }
-        .btn-save   { background:#6a4c93; color:#fff; padding:6px 12px; font-size:12px; }
+        .btn-new    { background:#e9c46a; color:#000; } .btn-sample { background:#7209b7; color:#fff; }
+        .btn-auto   { background:#3a86ff; color:#fff; } .btn-load   { background:#06d6a0; color:#000; }
+        .btn-url    { background:#fb8500; color:#000; } .btn-save   { background:#6a4c93; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-saveas { background:#4a3570; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-open   { background:#2d6a4f; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-gls-run{ background:#e63946; color:#fff; padding:6px 14px; font-size:12px; }
         .btn-view   { background:none; border:1px solid var(--border); border-radius:5px; padding:4px 8px; font-size:12px; color:var(--text2); cursor:pointer; }
-        .btn-view:hover { background:var(--bg3); }
-        .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+        .btn-view:hover { background:var(--bg3); } .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
         .add-panel-row { display:flex; gap:8px; margin-bottom:20px; }
         .btn-add-panel { background:none; border:1px dashed var(--border); border-radius:6px; color:var(--accent2); cursor:pointer; font-size:13px; padding:6px 14px; transition:background .2s; flex:1; }
         .btn-add-panel:hover { background:var(--bg3); }
         .sidebar-close { position:absolute; top:8px; right:8px; background:none; border:1px solid var(--border); border-radius:5px; padding:2px 8px; font-size:12px; color:var(--text2); cursor:pointer; z-index:10; }
         .sidebar-close:hover { background:var(--bg3); }
         body:not(.sidebar-mode) .sidebar-close { display:none; }
-        /* planet table */
+
+        /* ── planet table ── */
         #planetTableWrap { overflow-x:auto; }
         .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(110px,1fr)); gap:2px 3px; align-items:start; font-size:12px; min-width:0; }
-        .pt-corner {}
-        .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
+        .pt-corner {} .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
         .pt-head input.planet-name-input { font-size:12px; width:65px; }
         .pt-label { font-size:11px; color:var(--text2); text-align:right; padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
         .pt-label.sep { border-top:1px solid var(--border); padding-top:5px; margin-top:3px; }
         .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
+        /* fit checkbox RIGHT of input */
         .pt-cell-top { display:flex; align-items:center; gap:3px; }
         .pt-cell-top input[type=checkbox] { width:12px; height:12px; flex:0 0 auto; accent-color:var(--accent2); cursor:pointer; margin:0; }
         .pt-cell input[type=number] { flex:1; min-width:0; padding:2px 3px; font-size:12px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:3px; }
         .pt-cell input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .pt-cell .param-sigma { font-size:10px; color:var(--text2); text-align:right; min-height:12px; padding-left:16px; }
+        .pt-cell .param-sigma { font-size:10px; color:var(--text2); text-align:right; min-height:12px; }
         .pt-derived { font-size:11px; color:var(--val); font-family:monospace; padding:1px 3px; align-self:center; }
+
         .planet-view-bar { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:12px; }
         #planetTabView, #planetTableView { min-height:120px; }
         .inset-box { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:6px 8px; }
-        /* panel slot */
+
+        /* ── panel slots ── */
         .panel-slot { padding:10px; }
         .panel-slot-header { display:flex; align-items:center; gap:8px; user-select:none; margin-bottom:0; cursor:grab; }
         .panel-slot-header:active { cursor:grabbing; }
@@ -264,8 +281,7 @@
         .plot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
         .plot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
         .check-item { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); cursor:pointer; }
-        .plot-rv  { width:100%; height:340px; }
-        .plot-res { width:100%; height:160px; }
+        .plot-rv  { width:100%; height:340px; } .plot-res { width:100%; height:160px; }
         .plot-divider { height:1px; background:var(--border); margin:3px 0; }
         .gls-slot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
         .gls-slot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
@@ -288,19 +304,43 @@
 
 <div id="sidebarResizeHandle"></div>
 
+<!-- ── fixed project bar ── -->
 <div class="project-bar" id="projectBar">
     <span class="app-title">💫 RV Fitter</span>
     <button class="btn-new"  id="btnNew"  style="padding:3px 8px;font-size:12px;">🆕</button>
     <button class="btn-open" id="btnOpen" style="padding:3px 8px;font-size:12px;">📂</button>
     <input type="file" id="projectFileInput" accept=".rvproj,.json" style="display:none;">
-    <label for="projectName" style="font-size:12px;color:var(--text2);">📁</label>
+
+    <!-- projectName: no label, styled as editable title -->
     <input type="text" id="projectName" value="untitled" placeholder="project name">
+
+    <!-- Save group -->
     <div class="project-btns">
         <button class="btn-save"   id="btnSave"  >💾 Save</button>
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
-        <button class="btn-view"   id="btnSidebar">⊳ Sidebar</button>
-        <button class="theme-btn"  id="btnTheme"  >🌓</button>
     </div>
+
+    <!-- View/Theme group: margin-left separates from save group -->
+    <button class="btn-view"  id="btnSidebar">⊳ Sidebar</button>
+    <button class="theme-btn" id="btnTheme"  >🌓</button>
+
+    <!-- GitHub link -->
+    <a class="github-link"
+       href="https://github.com/mzechmeister/Radial-velocity-orbit-fitter"
+       target="_blank" rel="noopener"
+       title="GitHub: mzechmeister/Radial-velocity-orbit-fitter">
+        <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+                     0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
+                     -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
+                     .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
+                     -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
+                     .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
+                     .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
+                     0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+    </a>
+
     <div class="project-spacer"></div>
     <button class="btn-fit-top" id="btnFitTop"><span>▶ Fit</span></button>
 </div>
@@ -327,6 +367,7 @@
 </div>
 </div>
 
+<!-- ── param panel ── -->
 <div class="panel param-panel" id="paramPanel">
     <button class="sidebar-close" id="btnSidebarClose">⊲ Close</button>
     <div class="panel-header" id="paramHeader">
@@ -340,8 +381,7 @@
                 <input type="number" id="globalBJD0" value="0" step="1">
                 <span class="unit-lbl">RV unit</span>
                 <select class="global-unit-sel" id="globalUnit">
-                    <option value="m/s">m/s</option>
-                    <option value="km/s">km/s</option>
+                    <option value="m/s">m/s</option><option value="km/s">km/s</option>
                 </select>
             </div>
             <div class="starmass-row">
@@ -351,35 +391,46 @@
                 <input type="number" id="starMassSig" value="0.0" step="0.01" min="0">
                 <span class="unit-lbl"><em>m</em> unit</span>
                 <select id="msiniUnit">
-                    <option value="Mjup">M♃</option>
-                    <option value="Mear">M⊕</option>
-                    <option value="Msun">M☉</option>
+                    <option value="Mjup">M♃</option><option value="Mear">M⊕</option><option value="Msun">M☉</option>
                 </select>
             </div>
-            <div class="planet-view-bar">
-                <span style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;opacity:.8;">Planets</span>
-                <button class="btn-view" id="btnPlanetViewTab">≡ Tabs</button>
-                <button class="btn-view active" id="btnPlanetViewTable">⊞ Table</button>
+
+            <!-- ── PLANETS section ── -->
+            <div class="stats-group inset-box">
+                <div class="stats-group-title">Planets</div>
+                <div class="planet-view-bar">
+                    <button class="btn-view" id="btnPlanetViewTab">≡ Tabs</button>
+                    <button class="btn-view active" id="btnPlanetViewTable">⊞ Table</button>
+                </div>
+                <div id="planetTabView" style="display:none;">
+                    <div class="planet-tab-bar" id="planetTabBar"></div>
+                    <div class="planet-tab-content"><div id="planetBlocks"></div></div>
+                </div>
+                <div id="planetTableView">
+                    <div id="planetTableWrap"><div class="planet-table" id="planetTable"></div></div>
+                </div>
             </div>
-            <div id="planetTabView" style="display:none;">
-                <div class="planet-tab-bar" id="planetTabBar"></div>
-                <div class="planet-tab-content"><div id="planetBlocks"></div></div>
+
+            <!-- ── OFFSETS & NOISE section ── -->
+            <div class="stats-group inset-box">
+                <div class="stats-group-title">Offsets &amp; Noise</div>
+                <div id="gammaRows"></div>
+                <div class="gamma-ref-row">
+                    <span class="param-label" title="Reference γ for orbit curve (not fitted)."><em>γ</em>&nbsp;– reference</span>
+                    <input type="number" id="gammaRefVal" value="0" step="1">
+                    <span class="unit-lbl">source</span>
+                    <select id="gammaRefSrc"><option value="custom">custom</option></select>
+                </div>
             </div>
-            <div id="planetTableView">
-                <div id="planetTableWrap"><div class="planet-table" id="planetTable"></div></div>
-            </div>
-            <div id="gammaRows"></div>
-            <div class="gamma-ref-row">
-                <span class="param-label" title="Reference γ for orbit curve (not fitted)."><em>γ</em>&nbsp;– reference</span>
-                <input type="number" id="gammaRefVal" value="0" step="1">
-                <span class="unit-lbl">source</span>
-                <select id="gammaRefSrc"><option value="custom">custom</option></select>
-            </div>
+
             <div class="section-sep"></div>
+
+            <!-- ── FIT QUALITY section ── -->
             <div class="stats-group inset-box">
                 <div class="stats-group-title">Fit quality</div>
                 <div id="fitStatsTable"></div>
             </div>
+
             <div class="stats-group inset-box" style="opacity:.45;">
                 <div class="stats-group-title">Debug</div>
                 <div class="derived-row">
@@ -416,18 +467,29 @@ const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down',
 const PLANET_COLORS =['#f72585','#a0ff78','#ffbe0b','#80ffdb','#b5838d','#ff9f1c'];
 const PLANET_LETTERS='bcdefghijklmnopqrstuvwxyz';
 
+// ── Planet table row definitions ──────────────────────────────────────────────
+const PT_DEFS=[
+    {key:'P',    step:0.1,  min:null,max:null},
+    {key:'K',    step:1,    min:null,max:null},
+    {key:'e',    step:0.01, min:0,   max:0.99},
+    {key:'omega',step:1,    min:null,max:null},
+    {key:'t0',   step:0.1,  min:null,max:null},
+];
+function ptLabelHtml(key){
+    const KU=getKUnit();
+    return{P:'<em>P</em> [days]',K:`<em>K</em> [${KU}]`,e:'<em>e</em>',omega:'<em>ω</em> [°]',t0:tOmegaLabel()}[key];
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let planets=[],nextPlanetId=1,activePlanetPid=null;
 let datasets=[],activeId=null,nextId=1,lastSavedFilename=null;
-let rvModelCallCount=0,undoSnapshot=null;
-let _lastSigmasFull=null;
-let dragDsPid=null;       // dataset tab drag
-let dragPlanetPid=null;   // planet tab drag
-const glsLineStates={};
-let glsDragStates={};
+let rvModelCallCount=0,undoSnapshot=null,_lastSigmasFull=null;
+let dragDsPid=null,dragPlanetPid=null;
+const glsLineStates={},glsDragStates={};
 let _planetView='table';
-let panels=[],nextPanelId=1;
-let _dragPanelSid=null;
+let panels=[],nextPanelId=1,_dragPanelSid=null;
+// zoom sync state per slot
+const _slotSyncState={};
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 const el        =id=>document.getElementById(id);
@@ -496,58 +558,46 @@ function defaultPlanetName(i){ return 'Planet '+(PLANET_LETTERS[i]||String.fromC
 function planetColor(i){ return PLANET_COLORS[i%PLANET_COLORS.length]; }
 function planetIndex(pid){ return planets.findIndex(p=>p.pid===pid); }
 
+// ── GLS overlay refresh helper ────────────────────────────────────────────────
+const refreshGLSOverlays=()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+
 // ── Scrollbar + sidebar ───────────────────────────────────────────────────────
 function updateScrollbarWidth(){ const w=window.innerWidth-document.documentElement.clientWidth; document.documentElement.style.setProperty('--scrollbar-w',(w||15)+'px'); }
 function getSidebarWidth(){ return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'))||440; }
 function initSidebarResize(){
-    const handle=el('sidebarResizeHandle');
-    let startX,startW;
-    function onDrag(e){
-        const newW=Math.max(280,Math.min(780,startW+(startX-e.clientX)));
-        document.documentElement.style.setProperty('--sidebar-w',newW+'px');
-        clearTimeout(onDrag._t); onDrag._t=setTimeout(()=>resizeAllPlots(),80);
-    }
+    const handle=el('sidebarResizeHandle'); let startX,startW;
+    function onDrag(e){ const nw=Math.max(280,Math.min(780,startW+(startX-e.clientX))); document.documentElement.style.setProperty('--sidebar-w',nw+'px'); clearTimeout(onDrag._t); onDrag._t=setTimeout(()=>resizeAllPlots(),80); }
     function onDragEnd(){ handle.classList.remove('dragging'); document.removeEventListener('mousemove',onDrag); document.removeEventListener('mouseup',onDragEnd); resizeAllPlots(); }
-    handle.addEventListener('mousedown',e=>{
-        if(!document.body.classList.contains('sidebar-mode')) return;
-        e.preventDefault(); startX=e.clientX; startW=getSidebarWidth();
-        handle.classList.add('dragging');
-        document.addEventListener('mousemove',onDrag); document.addEventListener('mouseup',onDragEnd);
-    });
+    handle.addEventListener('mousedown',e=>{ if(!document.body.classList.contains('sidebar-mode')) return; e.preventDefault(); startX=e.clientX; startW=getSidebarWidth(); handle.classList.add('dragging'); document.addEventListener('mousemove',onDrag); document.addEventListener('mouseup',onDragEnd); });
     handle.addEventListener('touchstart',e=>{ const t=e.touches[0]; startX=t.clientX; startW=getSidebarWidth(); },{passive:true});
     handle.addEventListener('touchmove',e=>{ const t=e.touches[0]; const nw=Math.max(280,Math.min(780,startW+(startX-t.clientX))); document.documentElement.style.setProperty('--sidebar-w',nw+'px'); },{passive:true});
 }
 function resizeAllPlots(){
-    panels.forEach(p=>{
-        if(p.type==='plot'){ Plotly.Plots.resize(`plotRV_${p.sid}`); if(p.showRes) Plotly.Plots.resize(`plotRes_${p.sid}`); }
-        else Plotly.Plots.resize(`plotGLS_${p.sid}`);
-    });
-    panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    panels.forEach(p=>{ if(p.type==='plot'){ Plotly.Plots.resize(`plotRV_${p.sid}`); if(p.showRes) Plotly.Plots.resize(`plotRes_${p.sid}`); } else Plotly.Plots.resize(`plotGLS_${p.sid}`); });
+    refreshGLSOverlays();
 }
 
-// ── Read/write planet DOM ─────────────────────────────────────────────────────
-function readPlanetDOM(pl){
+// ── Planet ↔ DOM sync (single source of truth: planet object) ─────────────────
+function syncPlanetToDOM(pl){
     const KU=getKUnit();
-    pl.name=el(`pName_${pl.pid}`)?.value||pl.name;
-    // read from tab-view inputs only (planet object is source of truth)
-    const pInp=el(`pP_${pl.pid}`); if(pInp) pl.P=parseFloat(pInp.value)||pl.P;
-    const kInp=el(`pK_${pl.pid}`); if(kInp) pl.K_ms=toMs(parseFloat(kInp.value)||0,KU);
-    const eInp=el(`pE_${pl.pid}`); if(eInp) pl.e=parseFloat(eInp.value)||0;
-    const omInp=el(`pOmega_${pl.pid}`); if(omInp) pl.omega_deg=parseFloat(omInp.value)||0;
-    const t0Inp=el(`pT0_${pl.pid}`); if(t0Inp) pl.t0=parseFloat(t0Inp.value)||0;
-    ['fitP','fitK','fitE','fitOmega','fitT0'].forEach(k=>pl[k]=getChecked(`${k}_${pl.pid}`));
-    pl.active=getChecked(`pActive_${pl.pid}`);
+    setNumVal(`pP_${pl.pid}`,    pl.P,              6);
+    setNumVal(`pK_${pl.pid}`,    fromMs(pl.K_ms,KU),4);
+    setNumVal(`pE_${pl.pid}`,    pl.e,              6);
+    setNumVal(`pOmega_${pl.pid}`,pl.omega_deg,      2);
+    setNumVal(`pT0_${pl.pid}`,   pl.t0,             4);
+    const set=(k,v,d)=>{ const e=el(`pt_${k}_${pl.pid}`); if(e) e.value=isFinite(v)?v.toFixed(d):''; };
+    set('P',pl.P,6); set('K',fromMs(pl.K_ms,KU),4); set('e',pl.e,6);
+    set('omega',pl.omega_deg,2); set('t0',pl.t0,4);
 }
-function readAllPlanetDOM(){ planets.forEach(readPlanetDOM); }
-function writePlanetDOM(pl){
-    if(!pl?.pid) return;
+function syncTableToDOM(pid){
+    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
     const KU=getKUnit();
-    const nameEl=el(`pName_${pl.pid}`); if(nameEl) nameEl.value=pl.name;
-    setNumVal(`pP_${pl.pid}`,pl.P,6); setNumVal(`pK_${pl.pid}`,fromMs(pl.K_ms||0,KU),4);
-    setNumVal(`pE_${pl.pid}`,pl.e,6); setNumVal(`pOmega_${pl.pid}`,pl.omega_deg,2);
-    setNumVal(`pT0_${pl.pid}`,pl.t0,4);
-    const map={fitP:'fitP',fitK:'fitK',fitE:'fitE',fitOmega:'fitOmega',fitT0:'fitT0',active:'pActive'};
-    Object.entries(map).forEach(([key,pfx])=>{ const cb=el(`${pfx}_${pl.pid}`); if(cb&&pl[key]!=null) cb.checked=pl[key]; });
+    pl.P        = parseFloat(el(`pt_P_${pid}`)?.value)    ||0;
+    pl.K_ms     = toMs(parseFloat(el(`pt_K_${pid}`)?.value)||0,KU);
+    pl.e        = parseFloat(el(`pt_e_${pid}`)?.value)    ||0;
+    pl.omega_deg= parseFloat(el(`pt_omega_${pid}`)?.value)||0;
+    pl.t0       = parseFloat(el(`pt_t0_${pid}`)?.value)   ||0;
+    syncPlanetToDOM(pl);
 }
 
 // ── Project ───────────────────────────────────────────────────────────────────
@@ -596,7 +646,7 @@ function rebuildGLSSubtractRows(){
     });
 }
 
-// ── GLS overlay per slot ──────────────────────────────────────────────────────
+// ── GLS overlay ───────────────────────────────────────────────────────────────
 function glsLayoutOf(sid){ return el(`plotGLS_${sid}`)?._fullLayout||null; }
 function periodToPixelX(sid,P){
     const L=glsLayoutOf(sid); if(!L) return null;
@@ -624,8 +674,7 @@ function buildGLSOverlay(sid){
     if(!slot.showPeriod){ svg.style.display='none'; return; }
     svg.style.display='';
     const L=glsLayoutOf(sid); if(!L) return;
-    const pMin=slot.pMin||1,pMax=slot.pMax||1000;
-    const yTop=glsYTop(sid),yH=glsYH(sid);
+    const pMin=slot.pMin||1,pMax=slot.pMax||1000,yTop=glsYTop(sid),yH=glsYH(sid);
     if(!glsLineStates[sid]) glsLineStates[sid]={};
     planets.filter(pl=>pl.active!==false).forEach(pl=>{
         const fitP=pl.P; if(fitP<pMin||fitP>pMax) return;
@@ -654,8 +703,7 @@ function buildGLSOverlay(sid){
         hit.appendChild(ttl);
         hit.addEventListener('mousedown',e=>{ e.preventDefault(); e.stopPropagation(); _glsStartDrag(sid,pl.pid,e.clientX); });
         hit.addEventListener('click',e=>{
-            e.stopPropagation();
-            if(glsDragStates[sid]?.didMove) return;
+            e.stopPropagation(); if(glsDragStates[sid]?.didMove) return;
             state.active=!state.active;
             if(state.active){ Object.values(glsLineStates[sid]).forEach(s=>{ if(s!==state) s.active=false; }); showMsg(`Click GLS curve to set period for ${pl.name}`,true); }
             buildGLSOverlay(sid);
@@ -686,8 +734,8 @@ function _glsOnDragMove(sid,e){
     ds.didMove=true; ds.currentPeriod=period;
     const px=periodToPixelX(sid,period); if(px===null||!isFinite(px)) return;
     [`glsVis_${sid}_${ds.pid}`,`glsHit_${sid}_${ds.pid}`].forEach(id=>{ const l=el(id); if(l){ l.setAttribute('x1',px); l.setAttribute('x2',px); } });
-    // update planet object directly (source of truth)
-    const pl=planets.find(p=>p.pid===ds.pid); if(pl){ pl.P=period; setNumVal(`pP_${ds.pid}`,period,6); syncDOMToTable(ds.pid); }
+    const pl=planets.find(p=>p.pid===ds.pid);
+    if(pl){ pl.P=period; syncPlanetToDOM(pl); }
 }
 function _glsOnDragEnd(sid){
     const ds=glsDragStates[sid]; if(!ds) return;
@@ -700,33 +748,24 @@ function _glsHandleCurveClick(sid,period){
     const activePid=Object.entries(states).find(([,s])=>s.active)?.[0];
     if(!activePid) return false;
     const pl=planets.find(p=>p.pid===parseInt(activePid)); if(!pl) return false;
-    pl.P=period; setNumVal(`pP_${pl.pid}`,period,6); syncDOMToTable(pl.pid);
+    pl.P=period; syncPlanetToDOM(pl);
     states[activePid].active=false;
     showMsg(`Period of ${pl.name} set to ${period.toFixed(4)} d`,true);
     updateAllPanels(); buildGLSOverlay(sid); return true;
 }
 
 // ── Default opts ──────────────────────────────────────────────────────────────
-function defaultPlotOpts(opts={}){
-    return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x'};
-}
+function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x'}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
-    return{
-        pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??1000,
-        ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',
-        showPeriod:opts.showPeriod??last?.showPeriod??true,
-        useExt:opts.useExt??last?.useExt??false,
-        glsSubtract:opts.glsSubtract??{},_afterplotBound:false,
-    };
+    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??1000,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??false,glsSubtract:opts.glsSubtract??{},_afterplotBound:false};
 }
 
 // ── Add panel ─────────────────────────────────────────────────────────────────
 function addPanel(type,opts={}){
     const sid=nextPanelId++;
     const slot=type==='plot'?{type:'plot',sid,...defaultPlotOpts(opts)}:{type:'gls',sid,...defaultGLSOpts(opts)};
-    panels.push(slot);
-    _buildPanelDOM(slot);
+    panels.push(slot); _buildPanelDOM(slot);
     if(type==='plot'){ rebuildFoldSelects(); updatePlotSlot(sid); }
     else{ rebuildGLSSubtractRows(); updateGLSSlot(sid); }
     return slot;
@@ -786,12 +825,7 @@ function _buildPlotBody(slot,body){
 function _buildGLSBody(slot,body){
     const sid=slot.sid;
     const optRow=makeEl('div',{class:'gls-slot-options'});
-    function numOpt(lbl,key,min,step){
-        optRow.appendChild(makeEl('label',{html:lbl,style:{fontSize:'13px',color:'var(--text2)'}}));
-        const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)});
-        inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); });
-        optRow.appendChild(inp);
-    }
+    function numOpt(lbl,key,min,step){ optRow.appendChild(makeEl('label',{html:lbl,style:{fontSize:'13px',color:'var(--text2)'}})); const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)}); inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); }); optRow.appendChild(inp); }
     numOpt('<em>P</em><sub>min</sub>','pMin',0.01,0.1);
     numOpt('<em>P</em><sub>max</sub>','pMax',1,10);
     numOpt('ofac','ofac',1,1);
@@ -828,6 +862,14 @@ function loadExtGLS(){
 }
 
 function removePanel(sid){
+    // cleanup zoom sync listeners
+    const state=_slotSyncState[sid];
+    if(state){
+        const eRV=el(`plotRV_${sid}`),eRs=el(`plotRes_${sid}`);
+        if(state.rvL&&eRV) try{eRV.removeListener('plotly_relayout',state.rvL);}catch(e){}
+        if(state.rsL&&eRs) try{eRs.removeListener('plotly_relayout',state.rsL);}catch(e){}
+        delete _slotSyncState[sid];
+    }
     panels=panels.filter(p=>p.sid!==sid);
     el(`panelSlot_${sid}`)?.remove();
     delete glsLineStates[sid]; delete glsDragStates[sid];
@@ -835,8 +877,7 @@ function removePanel(sid){
 
 function swapPanels(sidA,sidB){
     const domA=el(`panelSlot_${sidA}`),domB=el(`panelSlot_${sidB}`);
-    const container=el('panelSlotsContainer');
-    const nodes=[...container.children];
+    const container=el('panelSlotsContainer'),nodes=[...container.children];
     const iA=nodes.indexOf(domA),iB=nodes.indexOf(domB);
     if(iA<iB){ container.insertBefore(domA,domB.nextSibling); container.insertBefore(domB,nodes[iA]); }
     else      { container.insertBefore(domB,domA.nextSibling); container.insertBefore(domA,nodes[iB]); }
@@ -849,6 +890,21 @@ function togglePanelSlot(sid){
     const open=!body.classList.contains('hidden');
     body.classList.toggle('hidden',open); arrow.classList.toggle('open',!open); arrow.classList.toggle('closed',open);
     if(!open){ const slot=panels.find(p=>p.sid===sid); setTimeout(()=>{ if(slot?.type==='plot'){ Plotly.Plots.resize(`plotRV_${sid}`); if(slot.showRes) Plotly.Plots.resize(`plotRes_${sid}`); } else{ Plotly.Plots.resize(`plotGLS_${sid}`); buildGLSOverlay(sid); } },50); }
+}
+
+// ── X-axis zoom sync per plot slot (RV ↔ residuals) ───────────────────────────
+function _attachSlotZoomSync(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||!slot.showRes) return;
+    const eRV=el(`plotRV_${sid}`),eRs=el(`plotRes_${sid}`); if(!eRV||!eRs) return;
+    const state=_slotSyncState[sid]||(_slotSyncState[sid]={});
+    if(state.rvL) try{eRV.removeListener('plotly_relayout',state.rvL);}catch(e){}
+    if(state.rsL) try{eRs.removeListener('plotly_relayout',state.rsL);}catch(e){}
+    let syncing=false;
+    const xru=ed=>{ if(ed['xaxis.range[0]']!==undefined) return{'xaxis.range[0]':ed['xaxis.range[0]'],'xaxis.range[1]':ed['xaxis.range[1]']}; if(ed['xaxis.autorange']===true) return{'xaxis.autorange':true}; return null; };
+    state.rvL=ed=>{ if(syncing)return; syncing=true; const u=xru(ed); if(u)Plotly.relayout(eRs,u).then(()=>{syncing=false;}); else syncing=false; };
+    state.rsL=ed=>{ if(syncing)return; syncing=true; const u=xru(ed); if(u)Plotly.relayout(eRV,u).then(()=>{syncing=false;}); else syncing=false; };
+    eRV.on('plotly_relayout',state.rvL);
+    eRs.on('plotly_relayout',state.rsL);
 }
 
 // ── Update plot slot ──────────────────────────────────────────────────────────
@@ -879,6 +935,8 @@ function updatePlotSlot(sid){
             yaxis:{...axBase,tickformat:'~r',title:`Residuals [${getKUnit()}]`,zeroline:true,zerolinewidth:1},
             showlegend:false},{responsive:true,displayModeBar:'hover'});
     }
+    // attach zoom sync after each render
+    _attachSlotZoomSync(sid);
     saveToSession();
 }
 
@@ -965,6 +1023,7 @@ function newProject(){
     planets=[]; nextPlanetId=1; activePlanetPid=null;
     Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
     Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
+    Object.keys(_slotSyncState).forEach(k=>delete _slotSyncState[k]);
     panels=[]; nextPanelId=1;
     el('projectName').value='untitled'; lastSavedFilename=null;
     undoSnapshot=null; _lastSigmasFull=null; el('undoBtn').disabled=true; el('globalBJD0').value='0';
@@ -981,7 +1040,7 @@ function onPlanetActiveToggle(pid){
     el(`planetBlock_${pid}`)?.classList.toggle('inactive',!pl.active);
     el(`pBody_${pid}`)?.querySelectorAll('input,select').forEach(e=>e.disabled=!pl.active);
     _updatePlanetTabDot(pid);
-    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); refreshGLSOverlays();
 }
 
 // ── Planet view toggle ────────────────────────────────────────────────────────
@@ -995,21 +1054,10 @@ function setPlanetView(view){
 }
 
 // ── Planet TABLE view ─────────────────────────────────────────────────────────
-function getPTRows(){
-    const KU=getKUnit();
-    return[
-        {key:'P',    labelHtml:'<em>P</em> [days]',    step:0.1,  min:null,max:null},
-        {key:'K',    labelHtml:`<em>K</em> [${KU}]`,   step:1,    min:null,max:null},
-        {key:'e',    labelHtml:'<em>e</em>',            step:0.01, min:0,   max:0.99},
-        {key:'omega',labelHtml:'<em>ω</em> [°]',        step:1,    min:null,max:null},
-        {key:'t0',   labelHtml:null,                    step:0.1,  min:null,max:null},
-    ];
-}
 function buildPlanetTable(){
     const tbl=el('planetTable'); tbl.innerHTML='';
     const n=planets.length; if(!n) return;
     tbl.style.setProperty('--n-planets',n);
-    const KU=getKUnit();
     tbl.appendChild(makeEl('div',{class:'pt-corner'}));
     planets.forEach((pl,i)=>{
         const col=planetColor(i);
@@ -1023,23 +1071,28 @@ function buildPlanetTable(){
         head.appendChild(activeCb); head.appendChild(nameInp); head.appendChild(delBtn);
         tbl.appendChild(head);
     });
-    getPTRows().forEach(({key,labelHtml,step,min,max})=>{
-        tbl.appendChild(makeEl('div',{class:'pt-label',html:key==='t0'?tOmegaLabel():labelHtml}));
+    PT_DEFS.forEach(({key,step,min,max})=>{
+        tbl.appendChild(makeEl('div',{class:'pt-label',html:ptLabelHtml(key)}));
         planets.forEach(pl=>{
             const fitKey=`fit${key.charAt(0).toUpperCase()+key.slice(1)}`;
             const ptId=`pt_${key}_${pl.pid}`;
+            const KU=getKUnit();
             let val=key==='K'?fromMs(pl.K_ms||0,KU):key==='omega'?pl.omega_deg:key==='t0'?pl.t0:pl[key]??0;
-            const fitCb=makeEl('input',{type:'checkbox',title:'Include in fit'});
-            fitCb.checked=pl[fitKey]??true;
-            fitCb.addEventListener('change',()=>{ pl[fitKey]=fitCb.checked; updateAllPanels(); });
             const inp=makeEl('input',{type:'number',id:ptId,value:String(val),step:String(step),
                 ...(min!=null?{min:String(min)}:{}),
                 ...(max!=null?{max:String(max)}:{})});
             inp.addEventListener('change',()=>{ syncTableToDOM(pl.pid); updateAllPanels(); });
             inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-            if(key==='P') inp.addEventListener('change',()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)));
+            if(key==='P') inp.addEventListener('change',refreshGLSOverlays);
+            const fitCb=makeEl('input',{type:'checkbox',title:'Include in fit'});
+            fitCb.checked=pl[fitKey]??true;
+            fitCb.addEventListener('change',()=>{
+                pl[fitKey]=fitCb.checked;
+                // fit flag change: no redraw needed
+            });
+            // input LEFT, checkbox RIGHT
             const topRow=makeEl('div',{class:'pt-cell-top'});
-            topRow.appendChild(fitCb); topRow.appendChild(inp);
+            topRow.appendChild(inp); topRow.appendChild(fitCb);
             const sigSpan=makeEl('span',{class:'param-sigma',id:`ptSig_${key}_${pl.pid}`});
             const cell=makeEl('div',{class:'pt-cell'});
             cell.appendChild(topRow); cell.appendChild(sigSpan);
@@ -1050,27 +1103,9 @@ function buildPlanetTable(){
     planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptMass_${pl.pid}`,text:'—'})));
     tbl.appendChild(makeEl('div',{class:'pt-label',html:'<em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]'}));
     planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptSma_${pl.pid}`,text:'—'})));
-    planets.forEach(pl=>syncDOMToTable(pl.pid));
+    planets.forEach(pl=>syncPlanetToDOM(pl));
 }
-function syncTableToDOM(pid){
-    // Table inputs → planet object (source of truth)
-    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
-    const KU=getKUnit();
-    const get=k=>parseFloat(el(`pt_${k}_${pid}`)?.value)||0;
-    pl.P=get('P'); pl.K_ms=toMs(get('K'),KU); pl.e=get('e'); pl.omega_deg=get('omega'); pl.t0=get('t0');
-    // also update hidden tab-view inputs
-    setNumVal(`pP_${pid}`,pl.P,6); setNumVal(`pK_${pid}`,fromMs(pl.K_ms,KU),4);
-    setNumVal(`pE_${pid}`,pl.e,6); setNumVal(`pOmega_${pid}`,pl.omega_deg,2);
-    setNumVal(`pT0_${pid}`,pl.t0,4);
-}
-function syncDOMToTable(pid){
-    // Planet object → table inputs
-    const pl=planets.find(p=>p.pid===pid); if(!pl) return;
-    const KU=getKUnit();
-    const set=(k,v,d)=>{ const e=el(`pt_${k}_${pid}`); if(e) e.value=isFinite(v)?v.toFixed(d):''; };
-    set('P',pl.P,6); set('K',fromMs(pl.K_ms||0,KU),4); set('e',pl.e,6);
-    set('omega',pl.omega_deg,2); set('t0',pl.t0,4);
-}
+
 function updateTableErrors(sigmas){
     const KU=getKUnit();
     const fmt=(v,isRV,isOmega)=>{ if(!v||!isFinite(v)) return ''; if(isOmega) return `±${fmtSig3(v*180/Math.PI)}°`; if(isRV) return `±${fmtSig3(fromMs(v,KU))}`; return `±${fmtSig3(v)}`; };
@@ -1088,43 +1123,23 @@ function updateTableDerived(){
 // ── Planet tabs with drag-to-reorder ─────────────────────────────────────────
 function rebuildPlanetTabs(){
     const bar=el('planetTabBar'); bar.innerHTML='';
-    // All tab (sticky left)
     const isAll=activePlanetPid==='all';
     const allTab=makeEl('div',{class:'planet-tab'+(isAll?' active':''),id:'ptab_all',style:{color:isAll?'var(--accent)':'var(--text2)'}});
     allTab.appendChild(makeEl('span',{text:'All'}));
     allTab.addEventListener('click',()=>switchPlanetTab('all'));
     bar.appendChild(allTab);
-    // individual planet tabs — draggable (same pattern as dragDsPid)
     planets.forEach(pl=>{
         const col=planetColor(planetIndex(pl.pid));
         const isActive=pl.pid===activePlanetPid;
-        const tab=makeEl('div',{
-            class:'planet-tab'+(isActive?' active':''),
-            id:`ptab_${pl.pid}`,
-            draggable:true,
-            style:{borderTopColor:col,color:isActive?col:'var(--text2)'}
-        });
+        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,draggable:true,style:{borderTopColor:col,color:isActive?col:'var(--text2)'}});
         tab.appendChild(makeEl('span',{text:'●',style:{color:col,fontSize:'10px',opacity:pl.active===false?'.35':'1'}}));
         tab.appendChild(makeEl('span',{text:pl.name}));
         tab.addEventListener('click',()=>switchPlanetTab(pl.pid));
-        tab.addEventListener('dragstart',e=>{
-            dragPlanetPid=pl.pid; tab.style.opacity='.4';
-            e.dataTransfer.effectAllowed='move'; e.stopPropagation();
-        });
-        tab.addEventListener('dragend',()=>{
-            dragPlanetPid=null; tab.style.opacity='';
-            document.querySelectorAll('.planet-tab.tab-drag-over').forEach(t=>t.classList.remove('tab-drag-over'));
-        });
-        tab.addEventListener('dragover',e=>{
-            e.preventDefault(); e.stopPropagation();
-            if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) tab.classList.add('tab-drag-over');
-        });
+        tab.addEventListener('dragstart',e=>{ dragPlanetPid=pl.pid; tab.style.opacity='.4'; e.dataTransfer.effectAllowed='move'; e.stopPropagation(); });
+        tab.addEventListener('dragend',()=>{ dragPlanetPid=null; tab.style.opacity=''; document.querySelectorAll('.planet-tab.tab-drag-over').forEach(t=>t.classList.remove('tab-drag-over')); });
+        tab.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) tab.classList.add('tab-drag-over'); });
         tab.addEventListener('dragleave',()=>tab.classList.remove('tab-drag-over'));
-        tab.addEventListener('drop',e=>{
-            e.preventDefault(); e.stopPropagation();
-            tab.classList.remove('tab-drag-over');
-            if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) _swapPlanets(dragPlanetPid,pl.pid);
-        });
+        tab.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); tab.classList.remove('tab-drag-over'); if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) _swapPlanets(dragPlanetPid,pl.pid); });
         bar.appendChild(tab);
     });
     const addBtn=makeEl('button',{class:'planet-tab-add',title:'Add planet',text:'+'});
@@ -1133,23 +1148,18 @@ function rebuildPlanetTabs(){
 }
 
 function _swapPlanets(pidA,pidB){
-    readAllPlanetDOM();
     const iA=planetIndex(pidA),iB=planetIndex(pidB); if(iA<0||iB<0) return;
     [planets[iA],planets[iB]]=[planets[iB],planets[iA]];
-    // swap DOM blocks in tab view
     const domA=el(`planetBlock_${pidA}`),domB=el(`planetBlock_${pidB}`);
     const container=el('planetBlocks');
     if(domA&&domB){
-        const nodes=[...container.children];
-        const nA=nodes.indexOf(domA),nB=nodes.indexOf(domB);
+        const nodes=[...container.children],nA=nodes.indexOf(domA),nB=nodes.indexOf(domB);
         if(nA<nB){ container.insertBefore(domA,domB.nextSibling); container.insertBefore(domB,nodes[nA]); }
         else      { container.insertBefore(domB,domA.nextSibling); container.insertBefore(domA,nodes[nB]); }
     }
     if(_planetView==='table') buildPlanetTable();
-    rebuildPlanetTabs();
-    rebuildGLSSubtractRows(); rebuildFoldSelects();
-    clearErrors(); updateAllPanels();
-    panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    rebuildPlanetTabs(); rebuildGLSSubtractRows(); rebuildFoldSelects();
+    clearErrors(); updateAllPanels(); refreshGLSOverlays();
 }
 
 function switchPlanetTab(pid){
@@ -1170,17 +1180,31 @@ function _updatePlanetTabDot(pid){
     const dot=tab.querySelector('span'); if(dot) dot.style.opacity=pl.active===false?'.35':'1';
 }
 
-// ── Planet param row ──────────────────────────────────────────────────────────
+// ── Planet param row (tab-view) ───────────────────────────────────────────────
 function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:fitId,title:'Include in fit'});
-    fitCb.checked=extra.checked??true; fitCb.addEventListener('change',updateAllPanels);
+    fitCb.checked=extra.checked??true;
+    fitCb.addEventListener('change',()=>{
+        const pl=planets.find(p=>p.pid===pid);
+        if(pl) pl[fitId.replace(`_${pid}`,'')]=fitCb.checked;
+        // fit flag change: no redraw needed
+    });
     const lbl=makeEl('label',{for:inputId,html:labelHtml});
     const inp=makeEl('input',{type:'number',id:inputId,step:String(step),value:String(extra.value??0),
         ...(extra.min!=null?{min:String(extra.min)}:{}),
         ...(extra.max!=null?{max:String(extra.max)}:{})});
-    inp.addEventListener('change',()=>{ const pl=planets.find(p=>p.pid===pid); if(!pl) return; readPlanetDOM(pl); updateAllPanels(); });
+    inp.addEventListener('change',()=>{
+        const pl=planets.find(p=>p.pid===pid); if(!pl) return;
+        const KU=getKUnit();
+        if(inputId===`pP_${pid}`)     { pl.P=parseFloat(inp.value)||0; syncPlanetToDOM(pl); }
+        if(inputId===`pK_${pid}`)     { pl.K_ms=toMs(parseFloat(inp.value)||0,KU); syncPlanetToDOM(pl); }
+        if(inputId===`pE_${pid}`)     { pl.e=parseFloat(inp.value)||0; syncPlanetToDOM(pl); }
+        if(inputId===`pOmega_${pid}`) { pl.omega_deg=parseFloat(inp.value)||0; syncPlanetToDOM(pl); }
+        if(inputId===`pT0_${pid}`)    { pl.t0=parseFloat(inp.value)||0; syncPlanetToDOM(pl); }
+        if(extra.onChange) extra.onChange();
+        updateAllPanels();
+    });
     inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-    if(extra.onChange) inp.addEventListener('change',extra.onChange);
     const sig=makeEl('span',{class:'param-sigma',id:sigId});
     const row=makeEl('div',{class:'param-item'});
     row.appendChild(fitCb); row.appendChild(lbl); row.appendChild(inp); row.appendChild(sig);
@@ -1200,12 +1224,11 @@ function _buildPlanetBlock(pl,col,KU){
     const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove planet',text:'×'});
     delBtn.addEventListener('click',e=>{ e.stopPropagation(); removePlanet(pid); });
     const header=makeEl('div',{class:'planet-header'},[activeCb,nameInp,delBtn]);
-    const onGLSChange=()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
-    const pRow=makePlanetParamRow(pid,`fitP_${pid}`,'<em>P</em> – Period [days]',`pP_${pid}`,0.1,`sigP_${pid}`,{value:pl.P,checked:pl.fitP??true,onChange:onGLSChange});
-    const kRow=makePlanetParamRow(pid,`fitK_${pid}`,'<em>K</em> – Semi-amplitude',`pK_${pid}`,1,`sigK_${pid}`,{value:fromMs(pl.K_ms||0,KU),checked:pl.fitK??true});
-    const eRow=makePlanetParamRow(pid,`fitE_${pid}`,'<em>e</em> – Eccentricity',`pE_${pid}`,0.01,`sigE_${pid}`,{value:pl.e,checked:pl.fitE??true,min:0,max:0.99});
-    const omRow=makePlanetParamRow(pid,`fitOmega_${pid}`,'<em>ω</em> – Arg. periastron [°]',`pOmega_${pid}`,1,`sigOmega_${pid}`,{value:pl.omega_deg,checked:pl.fitOmega??true});
-    const t0Row=makePlanetParamRow(pid,`fitT0_${pid}`,tOmegaLabel(),`pT0_${pid}`,0.1,`sigT0_${pid}`,{value:pl.t0,checked:pl.fitT0??true});
+    const pRow=makePlanetParamRow(pid,'fitP_'+pid,'<em>P</em> – Period [days]','pP_'+pid,0.1,'sigP_'+pid,{value:pl.P,checked:pl.fitP??true,onChange:refreshGLSOverlays});
+    const kRow=makePlanetParamRow(pid,'fitK_'+pid,'<em>K</em> – Semi-amplitude','pK_'+pid,1,'sigK_'+pid,{value:fromMs(pl.K_ms||0,KU),checked:pl.fitK??true});
+    const eRow=makePlanetParamRow(pid,'fitE_'+pid,'<em>e</em> – Eccentricity','pE_'+pid,0.01,'sigE_'+pid,{value:pl.e,checked:pl.fitE??true,min:0,max:0.99});
+    const omRow=makePlanetParamRow(pid,'fitOmega_'+pid,'<em>ω</em> – Arg. periastron [°]','pOmega_'+pid,1,'sigOmega_'+pid,{value:pl.omega_deg,checked:pl.fitOmega??true});
+    const t0Row=makePlanetParamRow(pid,'fitT0_'+pid,tOmegaLabel(),'pT0_'+pid,0.1,'sigT0_'+pid,{value:pl.t0,checked:pl.fitT0??true});
     const massRow=makeEl('div',{class:'planet-derived'});
     massRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>m</em>&thinsp;sin&thinsp;<em>i</em></span><span id="pMass_${pid}" style="font-size:12px;color:var(--val);font-family:monospace;">—</span>`;
     const smaRow=makeEl('div',{class:'planet-derived'});
@@ -1226,8 +1249,7 @@ function addPlanet(opts={}){
         fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
         fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
         active:opts.active??true,glsSubtract:opts.glsSubtract??true};
-    planets.push(pl);
-    activePlanetPid=pid;
+    planets.push(pl); activePlanetPid=pid;
     _buildPlanetBlock(pl,col,KU);
     rebuildPlanetTabs(); switchPlanetTab(pid);
     if(_planetView==='table') buildPlanetTable();
@@ -1238,19 +1260,18 @@ function onPlanetRename(pid){
     pl.name=el(`pName_${pid}`)?.value||defaultPlanetName(planetIndex(pid));
     const tab=el(`ptab_${pid}`); if(tab){ const lbl=tab.querySelectorAll('span')[1]; if(lbl) lbl.textContent=pl.name; }
     if(_planetView==='table') buildPlanetTable();
-    updateAllPanels(); rebuildGLSSubtractRows(); rebuildFoldSelects(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    updateAllPanels(); rebuildGLSSubtractRows(); rebuildFoldSelects(); refreshGLSOverlays();
 }
 function removePlanet(pid){
-    readAllPlanetDOM(); planets=planets.filter(p=>p.pid!==pid);
+    planets=planets.filter(p=>p.pid!==pid);
     el(`planetBlock_${pid}`)?.remove();
     if(activePlanetPid===pid) activePlanetPid=planets[0]?.pid||null;
     rebuildPlanetTabs();
     if(activePlanetPid) switchPlanetTab(activePlanetPid);
     if(_planetView==='table') buildPlanetTable();
-    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+    rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); refreshGLSOverlays();
 }
 
-// ── Fit buttons helper ────────────────────────────────────────────────────────
 function setFitBtnsDisabled(dis){ ['btnFit','btnFitTop'].forEach(id=>{ const b=el(id); if(b) b.disabled=dis; }); }
 // ── Dataset drag & drop ───────────────────────────────────────────────────────
 function setupDatasetDrag(tab,id){
@@ -1491,8 +1512,8 @@ function rebuildGammaRefSelector(){
 // ── γ + jitter UI ─────────────────────────────────────────────────────────────
 function rebuildGammaUI(){
     const container=el('gammaRows');
-    container.innerHTML=''; container.className='inset-box';
-    container.style.cssText='display:flex;flex-direction:column;gap:4px;margin-bottom:6px;';
+    container.innerHTML='';
+    container.style.cssText='display:flex;flex-direction:column;gap:4px;';
     const KU=getKUnit();
     datasets.forEach((ds,i)=>container.appendChild(makeGammaRowGamma(ds,i,KU)));
     datasets.forEach((ds,i)=>container.appendChild(makeGammaRowJitter(ds,i,KU)));
@@ -1502,7 +1523,10 @@ function makeGammaRowGamma(ds,idx,KU){
     const col=getDsColor(ds,idx),prevEl=el(`pGamma_${ds.id}`);
     const gMs=prevEl?toMs(parseFloat(prevEl.value)||0,KU):(ds.gamma||0);
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitGamma_${ds.id}`});
-    fitCb.checked=true; fitCb.addEventListener('change',updateAllPanels);
+    fitCb.checked=true;
+    fitCb.addEventListener('change',()=>{
+        // fit flag change: no redraw needed
+    });
     const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`γ &nbsp;${ds.name}`});
     const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
     inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
@@ -1514,7 +1538,10 @@ function makeGammaRowJitter(ds,idx,KU){
     const col=getDsColor(ds,idx),prevJit=el(`pJitter_${ds.id}`);
     const jitMs=prevJit?toMs(parseFloat(prevJit.value)||0,KU):0;
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitJitter_${ds.id}`});
-    fitCb.checked=false; fitCb.addEventListener('change',updateAllPanels);
+    fitCb.checked=false;
+    fitCb.addEventListener('change',()=>{
+        // fit flag change: no redraw needed
+    });
     const lbl=makeEl('label',{for:`pJitter_${ds.id}`,html:`<em>s</em> &nbsp;${ds.name}`});
     const inp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
     inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
@@ -1596,7 +1623,7 @@ function rvModelP(t,p,dsIdx=0){
     return rv;
 }
 
-// ── Param vector layout ───────────────────────────────────────────────────────
+// ── Param vector ──────────────────────────────────────────────────────────────
 function nPlanetParams(){ return planets.length*5; }
 function gammaOffset(){ return nPlanetParams(); }
 function jitterOffset(){ return nPlanetParams()+datasets.length; }
@@ -1625,7 +1652,7 @@ function getJitterSq(p,dsIdx){ return Math.max(0,p[jitterOffset()+dsIdx]||0); }
 function negLogLike(p,dd){
     const jOff=jitterOffset(); let nll=0;
     dd.forEach(({ts,rvs,errs,dsIdx})=>{
-        const s=Math.max(0,p[jOff+dsIdx]||0);  // s = jit²
+        const s=Math.max(0,p[jOff+dsIdx]||0);
         ts.forEach((t,i)=>{ const res=rvs[i]-rvModelP(t,p,dsIdx); const sig2=Math.max(errs[i]**2+s,1e-20); nll+=res**2/sig2+Math.log(sig2); });
     });
     return nll/2;
@@ -1653,15 +1680,17 @@ function negLogLikeHessian(full,flags,freeScales,dd){
     }
     return H;
 }
+
+// ── getFreeFlags: reads from planet objects ───────────────────────────────────
 function getFreeFlags(){
     const f=[];
     planets.forEach(pl=>{
         const active=pl.active!==false;
-        const fitFlag=(key)=>{
-            if(_planetView==='table') return active&&(pl[`fit${key.charAt(0).toUpperCase()+key.slice(1)}`]??true);
-            return active&&getChecked(`fit${key.charAt(0).toUpperCase()+key.slice(1)}_${pl.pid}`);
-        };
-        ['P','K','e','omega','t0'].forEach(k=>f.push(fitFlag(k)));
+        f.push(active&&(pl.fitP   ??true));
+        f.push(active&&(pl.fitK   ??true));
+        f.push(active&&(pl.fitE   ??true));
+        f.push(active&&(pl.fitOmega??true));
+        f.push(active&&(pl.fitT0  ??true));
     });
     datasets.forEach(ds=>f.push(getChecked(`fitGamma_${ds.id}`)));
     datasets.forEach(ds=>f.push(getChecked(`fitJitter_${ds.id}`,false)));
@@ -1672,51 +1701,32 @@ function expandParams(free,full0,flags){ const full=[...full0]; let fi=0; for(le
 function clampFull(p){
     const q=[...p];
     planets.forEach((_,i)=>q[i*5+2]=Math.max(0,Math.min(0.99,q[i*5+2])));
-    // clamp s = jit² ≥ 0
     datasets.forEach((_,i)=>q[jitterOffset()+i]=Math.max(0,q[jitterOffset()+i]||0));
     return q;
 }
 
-// ── getFullParamVector: planet objects are source of truth ────────────────────
+// ── getFullParamVector: reads from planet objects ─────────────────────────────
 function getFullParamVector(){
-    // if table view, sync table inputs → planet objects first
     if(_planetView==='table') planets.forEach(pl=>syncTableToDOM(pl.pid));
-    const KU=getKUnit(),p=[];
-    // read from planet objects directly
-    planets.forEach(pl=>{
-        p.push(pl.P);
-        p.push(pl.K_ms);
-        p.push(pl.e);
-        p.push(pl.omega_deg*Math.PI/180);
-        p.push(pl.t0);
-    });
+    const p=[];
+    planets.forEach(pl=>{ p.push(pl.P); p.push(pl.K_ms); p.push(pl.e); p.push(pl.omega_deg*Math.PI/180); p.push(pl.t0); });
     datasets.forEach(ds=>p.push(toMs(getNumVal(`pGamma_${ds.id}`),getKUnit())));
-    // store s = jit² internally
     datasets.forEach(ds=>{ const jit=toMs(Math.max(0,getNumVal(`pJitter_${ds.id}`)),getKUnit()); p.push(jit*jit); });
     return p;
 }
 
-// ── setFullParamVector: update planet objects + both views ────────────────────
+// ── setFullParamVector: updates planet objects + all DOM ──────────────────────
 function setFullParamVector(p){
     const KU=getKUnit();
     planets.forEach((pl,i)=>{
         const b=i*5;
-        // update planet object (source of truth)
         pl.P=p[b]; pl.K_ms=p[b+1]; pl.e=p[b+2];
         pl.omega_deg=p[b+3]*180/Math.PI; pl.t0=p[b+4];
-        // update tab-view inputs
-        setNumVal(`pP_${pl.pid}`,    pl.P,              6);
-        setNumVal(`pK_${pl.pid}`,    fromMs(pl.K_ms,KU),4);
-        setNumVal(`pE_${pl.pid}`,    pl.e,              6);
-        setNumVal(`pOmega_${pl.pid}`,pl.omega_deg,      2);
-        setNumVal(`pT0_${pl.pid}`,   pl.t0,             4);
-        // update table-view inputs
-        syncDOMToTable(pl.pid);
+        syncPlanetToDOM(pl);
     });
     const gStart=gammaOffset(),jStart=jitterOffset();
     datasets.forEach((ds,idx)=>{
         setNumVal(`pGamma_${ds.id}`,fromMs(p[gStart+idx]||0,getKUnit()),4);
-        // convert s = jit² back to jit = √s for display
         const jit=Math.sqrt(Math.max(0,p[jStart+idx]||0));
         setNumVal(`pJitter_${ds.id}`,fromMs(jit,getKUnit()),4);
     });
@@ -1729,7 +1739,6 @@ function paramScales(p,dd,rvStd){
     const scales=[];
     planets.forEach((_,i)=>{ const P=p[i*5],dP=P*P/Math.max(tspan,P*.5); scales.push(Math.max(dP,1e-4),Math.max(rvStd,.1),1.0,2*Math.PI,Math.max(P,1e-3)); });
     dd.forEach(()=>scales.push(Math.max(rvStd,.1)));
-    // scale for s = jit²: use (rvStd)²
     dd.forEach(()=>scales.push(Math.max(rvStd**2*.01,1e-4)));
     return{scales,steps:scales.map(s=>s*.1)};
 }
@@ -1826,11 +1835,9 @@ function estimateErrors(bestFull,dd){
     const sigmasFree=inv.map((row,j)=>Math.sqrt(Math.max(0,row[j])));
     const sigmasFull=new Float64Array(nFull); let fi=0;
     for(let j=0;j<nFull;j++) if(flags[j]) sigmasFull[j]=sigmasFree[fi++];
-    // convert σ(s) → σ(jit) = σ(s) / (2·jit)  via error propagation
     const jStart=jitterOffset();
     datasets.forEach((_,idx)=>{
-        const s=Math.max(0,bestFull[jStart+idx]||0);
-        const jit=Math.sqrt(s);
+        const s=Math.max(0,bestFull[jStart+idx]||0),jit=Math.sqrt(s);
         sigmasFull[jStart+idx]= jit>1e-10 ? sigmasFull[jStart+idx]/(2*jit) : 0;
     });
     const{chi2red,dof}=computeFitStats(bestFull,dd);
@@ -1872,7 +1879,7 @@ function computeFitStats(p,dd){
     let chi2=0,wsum=0,rss=0,n=0; const perDs={};
     dd.forEach(({ts,rvs,errs,dsIdx})=>{
         if(!perDs[dsIdx]) perDs[dsIdx]={rss:0,chi2:0,wsum:0,n:0};
-        const s=getJitterSq(p,dsIdx);  // s = jit²
+        const s=getJitterSq(p,dsIdx);
         ts.forEach((t,i)=>{ const res=rvs[i]-rvModelP(t,p,dsIdx); const sig2=Math.max(errs[i]**2+s,1e-20),chi2i=res**2/sig2; chi2+=chi2i; wsum+=1/sig2; rss+=res*res; n++; perDs[dsIdx].rss+=res*res; perDs[dsIdx].chi2+=chi2i; perDs[dsIdx].wsum+=1/sig2; perDs[dsIdx].n++; });
     });
     const dof=Math.max(n-nTot,1);
@@ -1938,16 +1945,13 @@ function autoGuess(){
         pl.P=(Math.max(...tArr)-Math.min(...tArr))/2||10;
         pl.K_ms=toMs((rvMax-rvMin)/2,KU);
         pl.e=0; pl.omega_deg=0; pl.t0=tArr[rvArr.indexOf(rvMax)];
-        setNumVal(`pP_${pl.pid}`,pl.P,4); setNumVal(`pK_${pl.pid}`,fromMs(pl.K_ms,KU),4);
-        setNumVal(`pE_${pl.pid}`,0,2); setNumVal(`pOmega_${pl.pid}`,0,2); setNumVal(`pT0_${pl.pid}`,pl.t0,4);
-        syncDOMToTable(pl.pid);
+        syncPlanetToDOM(pl);
     }
     dd.forEach(({rvs,dsIdx})=>setNumVal(`pGamma_${datasets[dsIdx].id}`,fromMs(mean(rvs),KU),4));
-    clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
-    showMsg('Auto-guess applied — click Fit.',true);
+    clearErrors(); updateAllPanels(); refreshGLSOverlays(); showMsg('Auto-guess applied — click Fit.',true);
 }
 function saveUndoSnapshot(){ undoSnapshot=[...getFullParamVector()]; el('undoBtn').disabled=false; }
-function undoFit(){ if(!undoSnapshot){ showMsg('Nothing to undo.',false); return; } setFullParamVector(undoSnapshot); undoSnapshot=null; el('undoBtn').disabled=true; clearErrors(); updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid)); showMsg('Fit undone.',true); }
+function undoFit(){ if(!undoSnapshot){ showMsg('Nothing to undo.',false); return; } setFullParamVector(undoSnapshot); undoSnapshot=null; el('undoBtn').disabled=true; clearErrors(); updateAllPanels(); refreshGLSOverlays(); showMsg('Fit undone.',true); }
 function resetCallCount(){ rvModelCallCount=0; el('rvModelCallCount').textContent='0'; }
 function timeColor(t,mn,mx){ const f=mx>mn?(t-mn)/(mx-mn):0; return `rgb(${Math.round(f<.5?30+f*2*140:170+(f-.5)*2*85)},${Math.round(f<.5?20+f*2*200:220-(f-.5)*2*30)},${Math.round(f<.5?180-f*2*140:40-(f-.5)*2*10)})`; }
 
@@ -2039,15 +2043,10 @@ function doFit(){
     showMsg(`Fitting [${nPlStr}] with ${algoNames[algo]}…`,true);
     setFitBtnsDisabled(true);
     let initP=getFullParamVector();
-    // Perturbation: if s=0 and fitJitter active, seed s = scale(s) so the
-    // first gradient step starts away from the boundary (see jitter comment above).
-    const rvStd=rvStdFromData(dd);
-    const scaleS=Math.max(rvStd**2*.01,1e-4);
+    const rvStd=rvStdFromData(dd),scaleS=Math.max(rvStd**2*.01,1e-4);
     datasets.forEach((ds,idx)=>{
-        if(getChecked(`fitJitter_${ds.id}`,false)){
-            const s=initP[jitterOffset()+idx];
-            if(s<1e-20) initP[jitterOffset()+idx]=scaleS;
-        }
+        if(getChecked(`fitJitter_${ds.id}`,false)&&initP[jitterOffset()+idx]<1e-20)
+            initP[jitterOffset()+idx]=scaleS;
     });
     setTimeout(()=>{
         try{
@@ -2055,7 +2054,7 @@ function doFit(){
             setFullParamVector(fitted);
             const errResult=estimateErrors(fitted,dd);
             if(errResult){ _lastSigmasFull=errResult.sigmasFull; displayErrors(errResult.sigmasFull); }
-            updateAllPanels(); panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
+            updateAllPanels(); refreshGLSOverlays();
             const{rms,wrms,chi2,chi2red}=displayFitStats(fitted,dd);
             const KU=getKUnit();
             el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
@@ -2067,7 +2066,6 @@ function doFit(){
 
 // ── Project JSON ──────────────────────────────────────────────────────────────
 function buildProjectJSON(){
-    readAllPlanetDOM();
     const KU=getKUnit();
     const planetsData=planets.map(pl=>({pid:pl.pid,name:pl.name,P:pl.P,K_ms:pl.K_ms,e:pl.e,omega_deg:pl.omega_deg,t0:pl.t0,fitP:pl.fitP,fitK:pl.fitK,fitE:pl.fitE,fitOmega:pl.fitOmega,fitT0:pl.fitT0,active:pl.active,glsSubtract:pl.glsSubtract??true}));
     const p=getFullParamVector();
@@ -2085,7 +2083,7 @@ function buildProjectJSON(){
         if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle};
         return{type:'gls',pMin:p.pMin,pMax:p.pMax,ofac:p.ofac,xAxis:p.xAxis,showPeriod:p.showPeriod,useExt:p.useExt,glsSubtract:p.glsSubtract||{}};
     });
-    return{version:23,projectName:getProjectName(),KUnit:KU,planets:planetsData,
+    return{version:25,projectName:getProjectName(),KUnit:KU,planets:planetsData,
         options:{fitAlgo:el('fitAlgo').value,msiniUnit:el('msiniUnit').value,starMass:getNumVal('starMass',1),starMassSig:getNumVal('starMassSig',0),globalBJD0:getNumVal('globalBJD0'),gammaRefSrc:el('gammaRefSrc').value,gammaRefVal:getNumVal('gammaRefVal'),activePlanetPid:activePlanetPid,planetView:_planetView,sidebarMode:document.body.classList.contains('sidebar-mode'),sidebarWidth:getSidebarWidth(),panels:panelsData},
         datasets:dsData};
 }
@@ -2111,6 +2109,7 @@ function loadProjectFromObj(proj){
     el('panelSlotsContainer').innerHTML=''; panels=[]; nextPanelId=1;
     Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
     Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
+    Object.keys(_slotSyncState).forEach(k=>delete _slotSyncState[k]);
     datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
     datasets=[]; nextId=1; activeId=null;
     ['dsTabs','dsPanes','gammaRows'].forEach(id=>el(id).innerHTML='');
@@ -2129,7 +2128,8 @@ function loadProjectFromObj(proj){
         const pl={pid:pd.pid||nextPlanetId++,name:pd.name||defaultPlanetName(planets.length),P:pd.P||10,K_ms:pd.K_ms||0,e:pd.e||0,omega_deg:pd.omega_deg||0,t0:pd.t0||0,fitP:pd.fitP??true,fitK:pd.fitK??true,fitE:pd.fitE??true,fitOmega:pd.fitOmega??true,fitT0:pd.fitT0??true,active:pd.active??true,glsSubtract:pd.glsSubtract??true};
         planets.push(pl);
         if(!activePlanetPid) activePlanetPid=pl.pid;
-        _buildPlanetBlock(pl,planetColor(planets.length-1),KU); writePlanetDOM(pl);
+        _buildPlanetBlock(pl,planetColor(planets.length-1),KU);
+        syncPlanetToDOM(pl);
     });
     rebuildPlanetTabs();
     const targetPid=planets.find(p=>p.pid===o.activePlanetPid)?.pid||planets[0]?.pid||null;
@@ -2174,9 +2174,7 @@ function loadSample(id){
     if(idx===0&&planets.length>0){
         const KU=getKUnit(),pl=planets[0];
         pl.P=7.5; pl.K_ms=80; pl.e=0.2; pl.omega_deg=30; pl.t0=1.0;
-        setNumVal(`pP_${pl.pid}`,7.5,2); setNumVal(`pK_${pl.pid}`,fromMs(80,KU),4);
-        setNumVal(`pE_${pl.pid}`,0.2,2); setNumVal(`pOmega_${pl.pid}`,30,2); setNumVal(`pT0_${pl.pid}`,1.0,2);
-        syncDOMToTable(pl.pid);
+        syncPlanetToDOM(pl);
     }
     setNumVal(`t0ref_${ds.id}`,-off,0); setNumVal(`pGamma_${ds.id}`,fromMs(gammaMs,getKUnit()),4);
     dsById(id).editor.setValue(txt); rebuildClipTable(id); if(idx===0) propagateUnitFromDs0();
@@ -2254,4 +2252,3 @@ window.onload=()=>{
 </script>
 </body>
 </html>
-```
