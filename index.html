@@ -114,7 +114,7 @@
         .ds-tab-add:hover { background:var(--tab-inactive); }
         .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
         .ds-pane { display:none; } .ds-pane.active { display:block; }
-        .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; color:var(--text2); border-left:4px solid transparent; }
+        .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; font-size:12px; color:var(--text2); }
         .ds-header label { white-space:nowrap; }
         .ds-header input[type=number] { width:80px; padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
         .ds-header input[type=number]:focus { outline:none; border-color:var(--accent2); }
@@ -142,6 +142,9 @@
         .CodeMirror-linenumber { color:var(--cm-gutter-fg)!important; font-size:12px; }
         .CodeMirror-cursor { border-left-color:var(--cm-cursor)!important; }
         .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
+        /* ds-editor-wrap: common wrapper for CodeMirror AND preview so the colour bar
+           is visible in both view modes (previously only the CodeMirror wrap had it) */
+        .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s; }
         input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         input[type=number]:focus,input[type=text]:focus,select:focus { outline:none; border-color:var(--accent2); }
         input[type=checkbox] { accent-color:var(--accent2); width:15px; height:15px; cursor:pointer; }
@@ -250,7 +253,9 @@
         body:not(.sidebar-mode) .sidebar-close { display:none; }
 
         /* ── planet table ── */
-        #planetTableWrap { overflow-x:auto; }
+        #planetTableWrap { overflow-x:auto; display:flex; gap:8px; align-items:flex-start; }
+        .btn-add-planet-table { padding:4px 10px; border-radius:6px; border:1px dashed var(--border); background:none; color:var(--accent2); cursor:pointer; font-size:15px; font-weight:bold; line-height:1; transition:background .2s; flex:0 0 auto; }
+        .btn-add-planet-table:hover { background:var(--bg3); }
         .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(110px,1fr)); gap:2px 3px; align-items:start; font-size:12px; min-width:0; }
         .pt-corner {} .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
         .pt-head input.planet-name-input { font-size:12px; width:65px; }
@@ -407,7 +412,10 @@
                     <div class="planet-tab-content"><div id="planetBlocks"></div></div>
                 </div>
                 <div id="planetTableView">
-                    <div id="planetTableWrap"><div class="planet-table" id="planetTable"></div></div>
+                    <div id="planetTableWrap">
+                        <div class="planet-table" id="planetTable"></div>
+                        <button class="btn-add-planet-table" id="btnAddPlanetTable" title="Add planet">+</button>
+                    </div>
                 </div>
             </div>
 
@@ -1030,6 +1038,7 @@ function newProject(){
     sessionStorage.removeItem('rvfitter_project');
     updateWindowTitle(); clearErrors();
     addPlanet(); addDataset(); addPanel('plot'); addPanel('gls');
+    toggleSidebar(true);
     showMsg('New project started.',true);
 }
 
@@ -1369,7 +1378,7 @@ function addDataset(initialText='',initialName=null,opts={}){
     const opacity=opts.opacity!=null?opts.opacity:1.0,size=opts.size||8,t0ref=opts.t0ref||0;
     const pane=makeEl('div',{class:'ds-pane',id:`pane_${id}`});
     pane.innerHTML=`
-    <div class="ds-header" id="dsHeader_${id}" style="border-left-color:${col};">
+    <div class="ds-header" id="dsHeader_${id}">
         <input type="color" id="dsColor_${id}" value="${col}" title="Colour" style="width:26px;height:22px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
         <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
@@ -1381,8 +1390,10 @@ function addDataset(initialText='',initialName=null,opts={}){
         <button id="btnRaw_${id}" class="active">Raw</button><button id="btnPrev_${id}">Preview</button>
         <label><input type="checkbox" id="clipEnabled_${id}" style="width:13px;height:13px;accent-color:#f72585;"> clip enabled</label>
     </div>
-    <div id="cmWrap_${id}"><div id="cm_${id}"></div></div>
-    <div class="ds-preview" id="preview_${id}" style="display:none;"></div>
+    <div class="ds-editor-wrap" id="dsEditorWrap_${id}" style="border-left-color:${col};">
+        <div id="cmWrap_${id}"><div id="cm_${id}"></div></div>
+        <div class="ds-preview" id="preview_${id}" style="display:none;"></div>
+    </div>
     <div class="data-stats-bar" id="statsBar_${id}" style="display:none;">
         <div class="stat-item"><span class="stat-label"><em>n</em> =</span><span class="stat-val" id="statN_${id}">—</span></div>
         <div class="stat-item"><span class="stat-label">span =</span><span class="stat-val" id="statSpan_${id}">—</span></div>
@@ -1425,7 +1436,7 @@ function addDataset(initialText='',initialName=null,opts={}){
 function onDsStyleChange(id){
     const ds=dsById(id); if(!ds) return;
     const col=getDsColor(ds,dsIndex(id));
-    const hdr=el(`dsHeader_${id}`); if(hdr) hdr.style.borderLeftColor=col;
+    const ew=el(`dsEditorWrap_${id}`); if(ew) ew.style.borderLeftColor=col;
     const tab=el(`tab_${id}`); if(tab) tab.style.borderTop=`3px solid ${col}`;
     rebuildGammaUI(); updateAllPanels();
 }
@@ -1520,14 +1531,14 @@ function rebuildGammaUI(){
     rebuildGammaRefSelector();
 }
 function makeGammaRowGamma(ds,idx,KU){
-    const col=getDsColor(ds,idx),prevEl=el(`pGamma_${ds.id}`);
+    const col=getDsColor(ds,idx),prevEl=el(`pGamma_${ds.id}`),prevFitEl=el(`fitGamma_${ds.id}`);
     const gMs=prevEl?toMs(parseFloat(prevEl.value)||0,KU):(ds.gamma||0);
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitGamma_${ds.id}`});
-    fitCb.checked=true;
+    fitCb.checked=prevFitEl?prevFitEl.checked:true;
     fitCb.addEventListener('change',()=>{
         // fit flag change: no redraw needed
     });
-    const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`γ &nbsp;${ds.name}`});
+    const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`<em>γ</em>&nbsp;${ds.name}`});
     const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
     inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
     const sig=makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`});
@@ -1535,10 +1546,10 @@ function makeGammaRowGamma(ds,idx,KU){
     [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
 }
 function makeGammaRowJitter(ds,idx,KU){
-    const col=getDsColor(ds,idx),prevJit=el(`pJitter_${ds.id}`);
+    const col=getDsColor(ds,idx),prevJit=el(`pJitter_${ds.id}`),prevFitEl=el(`fitJitter_${ds.id}`);
     const jitMs=prevJit?toMs(parseFloat(prevJit.value)||0,KU):0;
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitJitter_${ds.id}`});
-    fitCb.checked=false;
+    fitCb.checked=prevFitEl?prevFitEl.checked:false;
     fitCb.addEventListener('change',()=>{
         // fit flag change: no redraw needed
     });
@@ -1662,21 +1673,58 @@ function negLogLikeGradient(full,flags,freeScales,dd){
     for(let j=0;j<full.length;j++){ if(!flags[j]) continue; const h=Math.max(freeScales[fi]*EPS13,1e-10); const pf=clampFull([...full]); pf[j]+=h; const pb=clampFull([...full]); pb[j]-=h; const hEff=(pf[j]-pb[j])/2||h; g[fi]=(negLogLike(pf,dd)-negLogLike(pb,dd))/(2*hEff); fi++; }
     return g;
 }
+
+// ── Hessian: correctly handles clamped/asymmetric steps at parameter boundaries
+// (e.g. e=0, e=0.99). Symmetric central differences degenerate there because
+// clampFull() forces the backward step to coincide with the point itself,
+// which previously corrupted the curvature estimate and could make LM accept
+// a genuinely worse fit. Now uses an unequal-spacing formula, or a one-sided
+// 3-point formula when one side is fully pinned.
 function negLogLikeHessian(full,flags,freeScales,dd){
-    const EPS14=Math.pow(2.22e-16,0.25),nFree=freeScales.length;
+    const EPS14=Math.pow(2.22e-16,0.25);
+    const freeIdx=[]; for(let j=0;j<full.length;j++) if(flags[j]) freeIdx.push(j);
+    const nFree=freeIdx.length;
     const H=Array.from({length:nFree},()=>new Float64Array(nFree));
-    const f0=negLogLike(clampFull(full),dd); let fi=0;
-    for(let j=0;j<full.length;j++){
-        if(!flags[j]) continue;
-        const hj=Math.max(freeScales[fi]*EPS14,1e-8); let fk=0;
-        for(let k=0;k<full.length;k++){
-            if(!flags[k]) continue;
-            if(fk<fi){ H[fi][fk]=H[fk][fi]; fk++; continue; }
-            if(fi===fk){ const pf=clampFull([...full]); pf[j]+=hj; const pb=clampFull([...full]); pb[j]-=hj; H[fi][fi]=(negLogLike(pf,dd)-2*f0+negLogLike(pb,dd))/(hj*hj); }
-            else{ const hk=Math.max(freeScales[fk]*EPS14,1e-8); const ppp=clampFull([...full]); ppp[j]+=hj; ppp[k]+=hk; const ppm=clampFull([...full]); ppm[j]+=hj; ppm[k]-=hk; const pmp=clampFull([...full]); pmp[j]-=hj; pmp[k]+=hk; const pmm=clampFull([...full]); pmm[j]-=hj; pmm[k]-=hk; H[fi][fk]=H[fk][fi]=(negLogLike(ppp,dd)-negLogLike(ppm,dd)-negLogLike(pmp,dd)+negLogLike(pmm,dd))/(4*hj*hk); }
-            fk++;
+    const f0=negLogLike(clampFull(full),dd);
+    const hNom=freeIdx.map((j,fi)=>Math.max(freeScales[fi]*EPS14,1e-8));
+    // actual (possibly asymmetric, boundary-clamped) forward/backward step sizes
+    const hf=new Array(nFree),hb=new Array(nFree);
+    freeIdx.forEach((j,fi)=>{
+        const pf=clampFull([...full]); pf[j]+=hNom[fi]; hf[fi]=pf[j]-full[j];
+        const pb=clampFull([...full]); pb[j]-=hNom[fi]; hb[fi]=full[j]-pb[j];
+    });
+    for(let fi=0;fi<nFree;fi++){
+        const j=freeIdx[fi],hfi=hf[fi],hbi=hb[fi];
+        for(let fk=fi;fk<nFree;fk++){
+            const k=freeIdx[fk];
+            if(fi===fk){
+                let val;
+                if(hfi>1e-14&&hbi>1e-14){
+                    const pf=clampFull([...full]); pf[j]+=hNom[fi];
+                    const pb=clampFull([...full]); pb[j]-=hNom[fi];
+                    val=Math.abs(hfi-hbi)<1e-10*hNom[fi]
+                        ?(negLogLike(pf,dd)-2*f0+negLogLike(pb,dd))/(hfi*hfi)
+                        :2*(negLogLike(pb,dd)/(hbi*(hbi+hfi))-f0/(hbi*hfi)+negLogLike(pf,dd)/(hfi*(hbi+hfi)));
+                } else if(hfi>1e-14){
+                    const pf=clampFull([...full]); pf[j]+=hfi;
+                    const pf2=clampFull([...full]); pf2[j]+=2*hfi;
+                    val=(f0-2*negLogLike(pf,dd)+negLogLike(pf2,dd))/(hfi*hfi);
+                } else if(hbi>1e-14){
+                    const pb=clampFull([...full]); pb[j]-=hbi;
+                    const pb2=clampFull([...full]); pb2[j]-=2*hbi;
+                    val=(f0-2*negLogLike(pb,dd)+negLogLike(pb2,dd))/(hbi*hbi);
+                } else val=0; // fully pinned
+                H[fi][fi]=val;
+            } else {
+                const hfk=hf[fk],hbk=hb[fk];
+                const ppp=clampFull([...full]); ppp[j]+=hNom[fi]; ppp[k]+=hNom[fk];
+                const ppm=clampFull([...full]); ppm[j]+=hNom[fi]; ppm[k]-=hNom[fk];
+                const pmp=clampFull([...full]); pmp[j]-=hNom[fi]; pmp[k]+=hNom[fk];
+                const pmm=clampFull([...full]); pmm[j]-=hNom[fi]; pmm[k]-=hNom[fk];
+                const denom=(hfi+hbi)*(hfk+hbk);
+                H[fi][fk]=H[fk][fi]=denom>1e-20?(negLogLike(ppp,dd)-negLogLike(ppm,dd)-negLogLike(pmp,dd)+negLogLike(pmm,dd))/denom:0;
+            }
         }
-        fi++;
     }
     return H;
 }
@@ -1745,7 +1793,7 @@ function paramScales(p,dd,rvStd){
 function fixKSign(p){ const q=[...p]; let flipped=false; planets.forEach((_,i)=>{ if(q[i*5+1]<0){ q[i*5+1]=-q[i*5+1]; q[i*5+3]=(q[i*5+3]+Math.PI+2*Math.PI)%(2*Math.PI); flipped=true; } }); return{p:q,flipped}; }
 
 // ── Solvers ───────────────────────────────────────────────────────────────────
-function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-10,lambda0=1e-3,lambdaUp=10,lambdaDn=0.1}={}){
+function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-8,lambda0=1e-3,lambdaUp=10,lambdaDn=0.1}={}){
     const flags=getFreeFlags(),rvStd=rvStdFromData(dd);
     const{scales}=paramScales(initFull,dd,rvStd),freeScales=scales.filter((_,j)=>flags[j]);
     const obj=full=>negLogLike(clampFull(full),dd);
@@ -1760,7 +1808,13 @@ function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-10,lambda0=1e-3,lamb
         const fullNew=clampFull([...full]); let fi=0;
         for(let j=0;j<full.length;j++) if(flags[j]) fullNew[j]+=dp[fi++];
         const cNew=obj(fullNew);
-        if(cNew<c){ full=fullNew; c=cNew; lam=Math.max(lam*lambdaDn,1e-14); lastH=H; const sn=Math.sqrt(dp.reduce((s,v)=>s+v*v,0)),pn=Math.sqrt(full.reduce((s,v)=>s+v*v,1)); if(sn/pn<tol) break; }
+        if(cNew<c){
+            full=fullNew; c=cNew; lam=Math.max(lam*lambdaDn,1e-14); lastH=H;
+            // skaleninvariantes Konvergenzkriterium: max. relative Schrittgröße pro Parameter
+            let maxRelStep=0;
+            for(let i=0;i<dp.length;i++){ const sc=freeScales[i]||1e-8; const rel=Math.abs(dp[i])/sc; if(rel>maxRelStep) maxRelStep=rel; }
+            if(maxRelStep<tol) break;
+        }
         else{ lam=Math.min(lam*lambdaUp,1e12); if(lam>1e11) break; }
     }
     full._hessian=lastH; return clampFull(full);
@@ -2043,14 +2097,33 @@ function doFit(){
     showMsg(`Fitting [${nPlStr}] with ${algoNames[algo]}…`,true);
     setFitBtnsDisabled(true);
     let initP=getFullParamVector();
+    const originalCost=negLogLike(clampFull([...initP]),dd); // Referenzkosten vor Seeding/Fit
     const rvStd=rvStdFromData(dd),scaleS=Math.max(rvStd**2*.01,1e-4);
     datasets.forEach((ds,idx)=>{
         if(getChecked(`fitJitter_${ds.id}`,false)&&initP[jitterOffset()+idx]<1e-20)
             initP[jitterOffset()+idx]=scaleS;
     });
+    // K=0 macht das Modell unabhängig von e/ω/t0 → deren Gradient wird exakt 0
+    // und der Fit bleibt stecken. Kleinen Startwert setzen; e ebenfalls
+    // zurücksetzen, da es bei K=0 bislang wirkungslos (und ggf. beliebig) war.
+    planets.forEach((pl,i)=>{
+        if(pl.active===false) return;
+        const kIdx=i*5+1;
+        if((pl.fitK??true)&&Math.abs(initP[kIdx])<1e-9){
+            initP[kIdx]=Math.max(rvStd*0.1,1e-3);
+            if(pl.fitE??true) initP[i*5+2]=0;
+        }
+    });
     setTimeout(()=>{
         try{
             const fitted=runFit(initP,dd,algo);
+            const fittedCost=negLogLike(clampFull([...fitted]),dd);
+            const tol=1e-6*Math.max(1,Math.abs(originalCost));
+            if(fittedCost>originalCost+tol){
+                showMsg('⚠️ Fit result was worse than the starting values — kept original parameters. Try Auto Guess or a different algorithm.',false);
+                undoSnapshot=null; el('undoBtn').disabled=true;
+                return;
+            }
             setFullParamVector(fitted);
             const errResult=estimateErrors(fitted,dd);
             if(errResult){ _lastSigmasFull=errResult.sigmasFull; displayErrors(errResult.sigmasFull); }
@@ -2223,6 +2296,7 @@ function initStaticEvents(){
     el('btnSidebarClose').addEventListener('click',()=>toggleSidebar(false));
     el('btnPlanetViewTab').addEventListener('click',()=>setPlanetView('tabs'));
     el('btnPlanetViewTable').addEventListener('click',()=>setPlanetView('table'));
+    el('btnAddPlanetTable').addEventListener('click',()=>addPlanet());
     el('btnAddPlot').addEventListener('click',()=>addPanel('plot'));
     el('btnAddGLS').addEventListener('click',()=>addPanel('gls'));
     window.addEventListener('resize',updateScrollbarWidth);
@@ -2235,7 +2309,7 @@ window.onload=()=>{
     initStaticEvents();
     el('topRow').appendChild(el('paramPanel'));
     const restored=restoreFromSession();
-    if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); }
+    if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); toggleSidebar(true); }
     setPlanetView(_planetView);
     updateDerived(); updateWindowTitle();
     setTimeout(()=>{
