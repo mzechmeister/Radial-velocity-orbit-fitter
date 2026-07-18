@@ -45,7 +45,6 @@
         }
         .app-title { font-size:15px; font-weight:bold; color:var(--accent); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; }
 
-        /* projectName: styled as editable title, no label */
         #projectName {
             margin-left:8px;
             font-weight:bold; font-size:14px;
@@ -57,20 +56,16 @@
         #projectName:focus { outline:none; border-bottom-color:var(--accent2); }
 
         .project-btns { display:flex; gap:4px; flex:0 0 auto; align-items:center; }
-        /* Save group: margin-left for visual grouping */
         #btnSave { margin-left:8px; }
-        /* Sidebar: margin-left to separate from save group */
         #btnSidebar { margin-left:8px; }
 
         .project-spacer { flex:1; min-width:8px; }
         .theme-btn { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:13px; color:var(--text2); cursor:pointer; transition:background .2s; }
         .theme-btn:hover { background:var(--bg2); }
 
-        /* GitHub link in project bar */
         .github-link { color:var(--text2); flex:0 0 auto; opacity:.55; transition:opacity .2s,color .2s; display:flex; align-items:center; text-decoration:none; }
         .github-link:hover { opacity:1; color:var(--text); }
 
-        /* ── sidebar resize handle ── */
         #sidebarResizeHandle {
             display:none; position:fixed; top:var(--bar-h); bottom:0;
             left:calc(100vw - var(--sidebar-w) - 1px); width:4px;
@@ -80,7 +75,6 @@
         body.sidebar-mode #sidebarResizeHandle { display:block; }
         body.sidebar-mode #paramPanel { border-left:none; }
 
-        /* ── scroll containers ── */
         #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
         body.sidebar-mode { overflow:hidden; height:100vh; }
         body.sidebar-mode #leftScroll { position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w); overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
@@ -99,7 +93,7 @@
         .panel-body.hidden { display:none; }
         .data-panel { flex:1.4; min-width:0; overflow:hidden; }
 
-        /* ── dataset tabs: inactive = var(--bg2) like planet All/+ tabs ── */
+        /* ── dataset tabs ── */
         .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
         .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; color:var(--text2); cursor:pointer; font-size:13px; user-select:none; transition:background .2s,color .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
         .ds-tab:not(.active) { background:var(--bg2); }
@@ -128,22 +122,30 @@
         .view-toggle button:nth-child(2) { border-radius:0 4px 4px 0; border-left:none; }
         .view-toggle button.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
         .view-toggle label { margin-left:10px; font-size:12px; color:var(--text2); display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
-        .ds-preview { font-family:monospace; font-size:12px; background:var(--cm-bg); border:1px solid var(--border); border-radius:6px; padding:4px 0; height:150px; overflow-y:auto; }
-        .ds-preview-row { display:flex; align-items:center; padding:1px 6px; }
-        .ds-preview-row:hover { background:var(--bg3); }
-        .ds-preview-row.clipped { opacity:.35; text-decoration:line-through; }
-        .ds-preview-row.comment { color:var(--text2); opacity:.5; }
-        .ds-preview-cb { width:13px; height:13px; flex:0 0 auto; margin-right:6px; accent-color:#f72585; cursor:pointer; }
-        .ds-preview-time-wrap { display:inline-flex; justify-content:flex-end; margin-right:12px; }
-        .ds-preview-time-int { font-family:monospace; white-space:pre; text-align:right; color:var(--text2); }
-        .ds-preview-time-dec { font-family:monospace; white-space:pre; text-align:left; color:var(--text2); }
+
+        /* ── dataset preview: real table ── */
+        .ds-preview { font-family:monospace; font-size:12px; background:var(--cm-bg); border:1px solid var(--border); border-radius:6px; padding:0; height:150px; overflow:auto; }
+        .ds-preview-table { width:100%; border-collapse:collapse; font-family:monospace; font-size:12px; white-space:nowrap; }
+        .ds-preview-table th { position:sticky; top:0; background:var(--cm-bg); color:var(--accent); font-weight:normal; text-align:right; padding:2px 8px 4px 8px; border-bottom:1px solid var(--border); }
+        .ds-preview-table td { padding:1px 8px; text-align:right; }
+        .ds-preview-table tr:hover td { background:var(--bg3); }
+        .ds-preview-table tr.clipped td { opacity:.35; text-decoration:line-through; }
+        .ds-preview-table tr.comment td { color:var(--text2); opacity:.5; text-align:left; }
+        .ds-preview-table td.pv-linenum { color:var(--cm-gutter-fg); font-size:11px; user-select:none; }
+        .ds-preview-table td.pv-cb { padding:1px 4px; }
+        .ds-preview-table td.pv-date { color:var(--accent2); }
+        .ds-preview-table td.pv-time { text-align:right; color:var(--text2); }
+        .ds-preview-table td.pv-rv { color:var(--cyan); }
+        .ds-preview-table td.pv-err { color:var(--text2); }
+        .ds-preview-cb { width:13px; height:13px; accent-color:#f72585; cursor:pointer; }
+
         .CodeMirror { height:150px; font-family:monospace; font-size:13px; line-height:1.5; border:1px solid var(--border); border-radius:6px; background:var(--cm-bg)!important; color:var(--text)!important; min-width:320px; }
         .CodeMirror-gutters { background:var(--cm-gutter)!important; border-right:1px solid var(--border)!important; }
         .CodeMirror-linenumber { color:var(--cm-gutter-fg)!important; font-size:12px; }
         .CodeMirror-cursor { border-left-color:var(--cm-cursor)!important; }
         .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
         /* ds-editor-wrap: common wrapper for CodeMirror AND preview so the colour bar
-           is visible in both view modes (previously only the CodeMirror wrap had it) */
+           is visible in both view modes */
         .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s; }
         input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         input[type=number]:focus,input[type=text]:focus,select:focus { outline:none; border-color:var(--accent2); }
@@ -157,9 +159,15 @@
         .param-list { display:flex; flex-direction:column; gap:6px; }
         .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
         .param-item label { font-size:13px; color:var(--text2); text-align:right; }
-        .param-item input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
-        .param-item input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .param-fit-cb { width:15px; height:15px; cursor:pointer; accent-color:var(--accent2); justify-self:center; }
+        /* shared number-input styling: planet Tab view (.param-item) and Table view (.pt-cell) */
+        .param-item input[type=number],
+        .pt-cell input[type=number] { padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .param-item input[type=number]:focus,
+        .pt-cell input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .param-item input[type=number] { width:100%; }
+        .param-fit-cb,
+        .pt-cell-top input[type=checkbox] { width:14px; height:14px; cursor:pointer; accent-color:var(--accent2); margin:0; }
+        .param-fit-cb { justify-self:center; }
         .param-fit-cb:not(:checked)+label { opacity:.35; }
         .param-sigma { font-size:11px; color:var(--text2); font-family:monospace; white-space:nowrap; }
         .derived-row { display:flex; align-items:center; gap:6px; }
@@ -168,7 +176,6 @@
         .derived-row .d-val.sm { font-size:12px; }
         .planet-derived { display:grid; grid-template-columns:15px 160px auto; align-items:center; gap:6px; opacity:.8; }
         .planet-derived span.d-label { font-size:12px; color:var(--text2); text-align:right; }
-        .planet-derived span.d-val { font-size:12px; color:var(--val); font-family:monospace; }
         .section-sep { height:1px; background:var(--border); margin:3px 0; }
         .stats-group { display:flex; flex-direction:column; gap:3px; }
         .stats-group-title { font-size:11px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; opacity:.8; }
@@ -185,7 +192,6 @@
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-        /* planet tabs: inactive = var(--bg2), same as All/+ */
         .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
         .planet-tab:not(.active) { background:var(--bg2); }
         .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
@@ -212,7 +218,6 @@
         .bjd0-row,.starmass-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row { grid-template-columns:160px 90px auto auto; }
         .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
-        /* gamma-ref-row: grid only, no standalone border (inside inset-box now) */
         .gamma-ref-row { display:grid; grid-template-columns:160px 90px auto auto; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { font-size:13px; color:var(--text2); text-align:right; }
         .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
@@ -256,19 +261,19 @@
         #planetTableWrap { overflow-x:auto; display:flex; gap:8px; align-items:flex-start; }
         .btn-add-planet-table { padding:4px 10px; border-radius:6px; border:1px dashed var(--border); background:none; color:var(--accent2); cursor:pointer; font-size:15px; font-weight:bold; line-height:1; transition:background .2s; flex:0 0 auto; }
         .btn-add-planet-table:hover { background:var(--bg3); }
-        .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(110px,1fr)); gap:2px 3px; align-items:start; font-size:12px; min-width:0; }
+        .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(90px,130px)); gap:3px 8px; align-items:start; font-size:13px; min-width:0; }
         .pt-corner {} .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
-        .pt-head input.planet-name-input { font-size:12px; width:65px; }
-        .pt-label { font-size:11px; color:var(--text2); text-align:right; padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
+        .pt-head input.planet-name-input { font-size:13px; width:65px; }
+        .pt-label { font-size:12px; color:var(--text2); text-align:right; padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
         .pt-label.sep { border-top:1px solid var(--border); padding-top:5px; margin-top:3px; }
         .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
-        /* fit checkbox RIGHT of input */
         .pt-cell-top { display:flex; align-items:center; gap:3px; }
-        .pt-cell-top input[type=checkbox] { width:12px; height:12px; flex:0 0 auto; accent-color:var(--accent2); cursor:pointer; margin:0; }
-        .pt-cell input[type=number] { flex:1; min-width:0; padding:2px 3px; font-size:12px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:3px; }
-        .pt-cell input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .pt-cell .param-sigma { font-size:10px; color:var(--text2); text-align:right; min-height:12px; }
-        .pt-derived { font-size:11px; color:var(--val); font-family:monospace; padding:1px 3px; align-self:center; }
+        .pt-cell-top input[type=checkbox] { flex:0 0 auto; }
+        .pt-cell input[type=number] { flex:1; min-width:0; }
+        .pt-cell .param-sigma { text-align:right; min-height:13px; }
+        .pt-derived,
+        .planet-derived span.d-val { font-size:12px; color:var(--val); font-family:monospace; }
+        .pt-derived { padding:1px 3px; align-self:center; }
 
         .planet-view-bar { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:12px; }
         #planetTabView, #planetTableView { min-height:120px; }
@@ -316,20 +321,16 @@
     <button class="btn-open" id="btnOpen" style="padding:3px 8px;font-size:12px;">📂</button>
     <input type="file" id="projectFileInput" accept=".rvproj,.json" style="display:none;">
 
-    <!-- projectName: no label, styled as editable title -->
     <input type="text" id="projectName" value="untitled" placeholder="project name">
 
-    <!-- Save group -->
     <div class="project-btns">
         <button class="btn-save"   id="btnSave"  >💾 Save</button>
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
     </div>
 
-    <!-- View/Theme group: margin-left separates from save group -->
     <button class="btn-view"  id="btnSidebar">⊳ Sidebar</button>
     <button class="theme-btn" id="btnTheme"  >🌓</button>
 
-    <!-- GitHub link -->
     <a class="github-link"
        href="https://github.com/mzechmeister/Radial-velocity-orbit-fitter"
        target="_blank" rel="noopener"
@@ -549,7 +550,7 @@ function xAxisLabel(slot){
     if(slot.foldPid!==null){ const pl=planets.find(p=>p.pid===slot.foldPid); return `Phase [days]  (${pl?.name||''})`; }
     if(slot.showAsDate) return 'Date (UTC)';
     if(bjd0) return `BJD − ${bjd0} [days]`;
-    return 'Time [days]';
+    return 'Time <i>t</i> [days]';
 }
 
 // ── Plot base ─────────────────────────────────────────────────────────────────
@@ -843,7 +844,6 @@ function _buildGLSBody(slot,body){
     const extLbl=makeEl('label',{class:'check-item'}); const extCb=makeEl('input',{type:'checkbox'}); extCb.checked=slot.useExt;
     extCb.addEventListener('change',()=>{ slot.useExt=extCb.checked; if(extCb.checked) loadExtGLS(); });
     extLbl.appendChild(extCb); extLbl.appendChild(makeEl('span',{text:' mzechmeister/gls.js'})); optRow.appendChild(extLbl);
-    if(extCb.checked) loadExtGLS();
     optRow.appendChild(makeEl('label',{text:'x-axis',style:{fontSize:'13px',color:'var(--text2)'}}));
     const xSel=makeEl('select',{style:{fontSize:'12px',padding:'2px 4px'}});
     xSel.innerHTML=`<option value="logperiod">log Period [d]</option><option value="period">Period [d]</option><option value="freq">Frequency [d⁻¹]</option>`;
@@ -858,6 +858,7 @@ function _buildGLSBody(slot,body){
     svg.id=`glsOverlay_${sid}`; svg.setAttribute('style','position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;');
     wrap.appendChild(svg); body.appendChild(wrap);
     body.appendChild(makeEl('div',{class:'gls-peak-info',id:`glsPeakInfo_${sid}`}));
+    if(extCb.checked) loadExtGLS();
 }
 
 function loadExtGLS(){
@@ -870,6 +871,7 @@ function loadExtGLS(){
     s.onerror=()=>showMsg('❌ Failed to load gls.js',false);
     document.head.appendChild(s);
 }
+
 function removePanel(sid){
     // cleanup zoom sync listeners
     const state=_slotSyncState[sid];
@@ -949,7 +951,6 @@ function updatePlotSlot(sid){
     saveToSession();
 }
 
-// ── Update GLS slot ───────────────────────────────────────────────────────────
 // ── Compute GLS periodogram (expensive) — cached in slot._cache ───────────────
 function computeGLSData(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
@@ -1013,7 +1014,9 @@ function renderGLSSlot(sid){
     el(`glsPeakInfo_${sid}`).textContent=xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`;
     _registerGLSListeners(sid);
 }
+
 function updateGLSSlot(sid){ computeGLSData(sid); renderGLSSlot(sid); }
+
 function _registerGLSListeners(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot||slot._afterplotBound) return;
     const plotDiv=el(`plotGLS_${sid}`); if(!plotDiv) return;
@@ -1109,9 +1112,7 @@ function buildPlanetTable(){
             fitCb.checked=pl[fitKey]??true;
             fitCb.addEventListener('change',()=>{
                 pl[fitKey]=fitCb.checked;
-                // fit flag change: no redraw needed
             });
-            // input LEFT, checkbox RIGHT
             const topRow=makeEl('div',{class:'pt-cell-top'});
             topRow.appendChild(inp); topRow.appendChild(fitCb);
             const sigSpan=makeEl('span',{class:'param-sigma',id:`ptSig_${key}_${pl.pid}`});
@@ -1208,7 +1209,6 @@ function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
     fitCb.addEventListener('change',()=>{
         const pl=planets.find(p=>p.pid===pid);
         if(pl) pl[fitId.replace(`_${pid}`,'')]=fitCb.checked;
-        // fit flag change: no redraw needed
     });
     const lbl=makeEl('label',{for:inputId,html:labelHtml});
     const inp=makeEl('input',{type:'number',id:inputId,step:String(step),value:String(extra.value??0),
@@ -1251,9 +1251,9 @@ function _buildPlanetBlock(pl,col,KU){
     const omRow=makePlanetParamRow(pid,'fitOmega_'+pid,'<em>ω</em> – Arg. periastron [°]','pOmega_'+pid,1,'sigOmega_'+pid,{value:pl.omega_deg,checked:pl.fitOmega??true});
     const t0Row=makePlanetParamRow(pid,'fitT0_'+pid,tOmegaLabel(),'pT0_'+pid,0.1,'sigT0_'+pid,{value:pl.t0,checked:pl.fitT0??true});
     const massRow=makeEl('div',{class:'planet-derived'});
-    massRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>m</em>&thinsp;sin&thinsp;<em>i</em></span><span id="pMass_${pid}" style="font-size:12px;color:var(--val);font-family:monospace;">—</span>`;
+    massRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>m</em>&thinsp;sin&thinsp;<em>i</em></span><span id="pMass_${pid}" class="d-val" style="font-size:12px;">—</span>`;
     const smaRow=makeEl('div',{class:'planet-derived'});
-    smaRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]</span><span id="pSma_${pid}" style="font-size:12px;color:var(--val);font-family:monospace;">—</span>`;
+    smaRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]</span><span id="pSma_${pid}" class="d-val" style="font-size:12px;">—</span>`;
     const body=makeEl('div',{class:'planet-body',id:`pBody_${pid}`},[pRow,kRow,eRow,omRow,t0Row,massRow,smaRow]);
     if(pl.active===false) body.querySelectorAll('input,select').forEach(e=>e.disabled=true);
     div.appendChild(header); div.appendChild(body);
@@ -1320,7 +1320,6 @@ function setDsView(id,view){
     if(view==='raw'){ cm.style.display='block'; pv.style.display='none'; btnRaw.classList.add('active'); btnPrev.classList.remove('active'); dsById(id)?.editor.refresh(); }
     else{ cm.style.display='none'; pv.style.display='block'; btnRaw.classList.remove('active'); btnPrev.classList.add('active'); buildDsPreview(id); }
 }
-function splitAtDecimal(s){ const d=s.indexOf('.'); return d<0?{int:s,dec:''}:{int:s.slice(0,d),dec:s.slice(d)}; }
 function buildDsPreview(id){
     const ds=dsById(id); if(!ds) return;
     const pv=el(`preview_${id}`); pv.innerHTML='';
@@ -1334,52 +1333,46 @@ function buildDsPreview(id){
         const tAdj=isFinite(tRaw)?tRaw+t0ref-bjd0:NaN;
         parsed.push({lineIdx,line,isComment:false,dataIdx:dataIdx++,tRaw:parts[0]||'',tAdj,rv:parts[1]||'',err:parts[2]||'',iso:isFinite(tRaw)?jdToIso(tRaw+t0ref):'—'});
     });
-    const dataRows=parsed.filter(r=>!r.isComment);
-    const tStrs=dataRows.map(r=>isFinite(r.tAdj)?r.tAdj.toFixed(6):(r.tRaw||'—'));
-    const tSplits=tStrs.map(s=>splitAtDecimal(s));
-    const wTInt=Math.max(1,...tSplits.map(s=>s.int.length));
-    const wTDec=Math.max(0,...tSplits.map(s=>s.dec.length));
-    const rvErrPairs=dataRows.map(r=>{
-        const rvNum=parseFloat(r.rv),errNum=parseFloat(r.err);
-        const rvMs=isNaN(rvNum)?null:toMs(rvNum,dsUnit);
-        const errMs=(!isNaN(errNum)&&errNum>0)?toMs(errNum,dsUnit):null;
-        const rvDisp=rvMs!==null?fromMs(rvMs,KU):null;
-        const errDisp=errMs!==null?fromMs(errMs,KU):null;
-        const{rvStr,errStr}=fmtRVPair(rvDisp??NaN,errDisp??NaN);
-        return{rvStr:rvDisp!==null?rvStr:'—',errStr:errDisp!==null?errStr:''};
-    });
-    const wISO=19,wRV=Math.max(6,...rvErrPairs.map(p=>p.rvStr.length)),wErr=Math.max(0,...rvErrPairs.map(p=>p.errStr.length));
-    const mkNum=(s,w,c)=>makeEl('span',{text:s.padStart(w),style:{fontFamily:'monospace',whiteSpace:'pre',marginRight:'12px',color:c}});
-    function mkTimeCell(tStr){ const{int,dec}=splitAtDecimal(tStr); const wrap=makeEl('span',{class:'ds-preview-time-wrap',style:{marginRight:'12px'}}); wrap.appendChild(makeEl('span',{class:'ds-preview-time-int',text:int.padStart(wTInt)})); wrap.appendChild(makeEl('span',{class:'ds-preview-time-dec',text:dec.padEnd(wTDec)})); return wrap; }
-    const mkHdr=(txt,w)=>makeEl('span',{text:txt.padStart(w),style:{fontFamily:'monospace',whiteSpace:'pre',marginRight:'12px',color:'var(--accent)'}});
-    function mkHdrTime(){ const lbl=bjd0?`t − ${bjd0}`:'time [JD]'; const totalW=wTInt+wTDec; const wrap=makeEl('span',{class:'ds-preview-time-wrap',style:{marginRight:'12px'}}); wrap.appendChild(makeEl('span',{text:lbl.padStart(totalW),style:{fontFamily:'monospace',whiteSpace:'pre',color:'var(--accent)'}})); return wrap; }
-    const hdr=makeEl('div',{class:'ds-preview-row',style:{borderBottom:'1px solid var(--border)',marginBottom:'2px',paddingBottom:'2px',fontWeight:'bold'}});
-    hdr.appendChild(makeEl('span',{style:{minWidth:'28px',flex:'0 0 auto',marginRight:'8px'}}));
-    hdr.appendChild(makeEl('span',{style:{width:'19px',flex:'0 0 auto'}}));
-    hdr.appendChild(mkHdr('date (UTC)',wISO)); hdr.appendChild(mkHdrTime());
-    hdr.appendChild(mkHdr(`RV [${KU}]`,wRV)); if(wErr>0) hdr.appendChild(mkHdr(`err [${KU}]`,wErr));
-    pv.appendChild(hdr);
-    parsed.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,iso})=>{
-        const row=makeEl('div',{class:'ds-preview-row'+(isComment?' comment':'')});
-        row.appendChild(makeEl('span',{text:String(lineIdx+1),style:{color:'var(--cm-gutter-fg)',fontSize:'11px',minWidth:'28px',textAlign:'right',marginRight:'8px',userSelect:'none',flex:'0 0 auto'}}));
-        if(!isComment){
-            const cb=makeEl('input',{type:'checkbox',class:'ds-preview-cb',title:'Clip this point'});
-            cb.checked=clipped.has(myIdx); if(clipOn&&cb.checked) row.classList.add('clipped');
-            cb.addEventListener('change',()=>{ const hcb=el(`clip_${id}_${myIdx}`); if(hcb){ hcb.checked=cb.checked; onClipToggle(id,myIdx); } row.classList.toggle('clipped',cb.checked&&getChecked(`clipEnabled_${id}`,false)); });
-            row.appendChild(cb);
-            const di=dataRows.findIndex(r=>r.dataIdx===myIdx);
-            const pair=di>=0?rvErrPairs[di]:{rvStr:'—',errStr:''};
-            const tStr=isFinite(tAdj)?tAdj.toFixed(6):'—';
-            row.appendChild(mkNum(iso,wISO,'var(--accent2)'));
-            row.appendChild(mkTimeCell(tStr));
-            row.appendChild(mkNum(pair.rvStr,wRV,'var(--cyan)'));
-            if(wErr>0) row.appendChild(mkNum(pair.errStr,wErr,'var(--text2)'));
+    const hasErr=parsed.some(r=>!r.isComment&&(()=>{ const e=parseFloat(r.err); return !isNaN(e)&&e>0; })());
+    const nCols=hasErr?5:4; // cb,date,time,rv,(err) — excl. line-number column
+
+    const table=makeEl('table',{class:'ds-preview-table'});
+    const headRow=makeEl('tr');
+    headRow.appendChild(makeEl('th')); // line number
+    headRow.appendChild(makeEl('th')); // checkbox
+    headRow.appendChild(makeEl('th',{text:'date (UTC)'}));
+    headRow.appendChild(makeEl('th',{html:bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]'}));
+    headRow.appendChild(makeEl('th',{text:`RV [${KU}]`}));
+    if(hasErr) headRow.appendChild(makeEl('th',{text:`err [${KU}]`}));
+    table.appendChild(makeEl('thead',{},[headRow]));
+
+    const tbody=makeEl('tbody');
+    parsed.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,tRaw,rv,err,iso})=>{
+        const tr=makeEl('tr',{class:isComment?'comment':''});
+        tr.appendChild(makeEl('td',{class:'pv-linenum',text:String(lineIdx+1)}));
+        if(isComment){
+            tr.appendChild(makeEl('td',{class:'pv-comment-text',colSpan:String(nCols),text:line}));
         } else {
-            row.appendChild(makeEl('span',{style:{width:'19px',flex:'0 0 auto'}}));
-            row.appendChild(makeEl('span',{text:line,style:{fontFamily:'monospace',whiteSpace:'pre',color:'var(--text2)',opacity:'.6'}}));
+            const cb=makeEl('input',{type:'checkbox',class:'ds-preview-cb',title:'Clip this point'});
+            cb.checked=clipped.has(myIdx); if(clipOn&&cb.checked) tr.classList.add('clipped');
+            cb.addEventListener('change',()=>{ const hcb=el(`clip_${id}_${myIdx}`); if(hcb){ hcb.checked=cb.checked; onClipToggle(id,myIdx); } tr.classList.toggle('clipped',cb.checked&&getChecked(`clipEnabled_${id}`,false)); });
+            const cbTd=makeEl('td',{class:'pv-cb'}); cbTd.appendChild(cb);
+            tr.appendChild(cbTd);
+            tr.appendChild(makeEl('td',{class:'pv-date',text:iso}));
+            tr.appendChild(makeEl('td',{class:'pv-time',text:isFinite(tAdj)?tAdj.toFixed(6):(tRaw||'—')}));
+            const rvNum=parseFloat(rv),errNum=parseFloat(err);
+            const rvMs=isNaN(rvNum)?null:toMs(rvNum,dsUnit);
+            const errMs=(!isNaN(errNum)&&errNum>0)?toMs(errNum,dsUnit):null;
+            const rvDisp=rvMs!==null?fromMs(rvMs,KU):null;
+            const errDisp=errMs!==null?fromMs(errMs,KU):null;
+            const{rvStr,errStr}=fmtRVPair(rvDisp??NaN,errDisp??NaN);
+            tr.appendChild(makeEl('td',{class:'pv-rv',text:rvDisp!==null?rvStr:'—'}));
+            if(hasErr) tr.appendChild(makeEl('td',{class:'pv-err',text:errDisp!==null?errStr:''}));
         }
-        pv.appendChild(row);
+        tbody.appendChild(tr);
     });
+    table.appendChild(tbody);
+    pv.appendChild(table);
 }
 
 // ── Add dataset ───────────────────────────────────────────────────────────────
@@ -1395,7 +1388,7 @@ function addDataset(initialText='',initialName=null,opts={}){
         <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
         <label>α</label><input type="range" id="dsOpacity_${id}" min="0.05" max="1" step="0.05" value="${opacity}" title="Opacity">
-        <label title="Added to file times">t0ref</label><input type="number" id="t0ref_${id}" value="${t0ref}" step="1">
+        <label title="Added to file times"><em>t</em><sub>0,ref</sub></label><input type="number" id="t0ref_${id}" value="${t0ref}" step="1">
         <label>unit</label><select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select>
     </div>
     <div class="view-toggle">
@@ -1548,7 +1541,6 @@ function makeGammaRowGamma(ds,idx,KU){
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitGamma_${ds.id}`});
     fitCb.checked=prevFitEl?prevFitEl.checked:true;
     fitCb.addEventListener('change',()=>{
-        // fit flag change: no redraw needed
     });
     const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`<em>γ</em>&nbsp;${ds.name}`});
     const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
@@ -1563,7 +1555,6 @@ function makeGammaRowJitter(ds,idx,KU){
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitJitter_${ds.id}`});
     fitCb.checked=prevFitEl?prevFitEl.checked:false;
     fitCb.addEventListener('change',()=>{
-        // fit flag change: no redraw needed
     });
     const lbl=makeEl('label',{for:`pJitter_${ds.id}`,html:`<em>s</em> &nbsp;${ds.name}`});
     const inp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
@@ -1652,24 +1643,6 @@ function gammaOffset(){ return nPlanetParams(); }
 function jitterOffset(){ return nPlanetParams()+datasets.length; }
 
 // ── Jitter parametrisation: s = jit²  ─────────────────────────────────────────
-//
-// negLogLike depends on jit² via sig2 = err² + jit², so
-// ∂L/∂jit = 2·jit · ∂L/∂(jit²) — which is identically zero at jit=0.
-// LM therefore finds no descent direction and does not iterate away from zero.
-//
-// Fix: use s = jit² as the internal free parameter (lives in ℝ, no clamping
-// needed for the sign). ∂L/∂s = Σ(err²-res²)/(2·sig2²) — informative at s=0.
-// s can go negative after an LM step; clampFull enforces s ≥ 0.
-//
-// Perturbation: if s=0 and fitJitter is active, seed s = scale(s)² so the
-// first gradient step starts away from the boundary.
-//
-// Future: negative s could encode correlated noise terms, or s=jit² could be
-// replaced by a richer covariance structure.
-//
-// Error estimate: σ(jit) = σ(s) / (2·jit)  via error propagation.
-//                 If jit≈0 after fit: jitter not significantly detected.
-
 function getJitterSq(p,dsIdx){ return Math.max(0,p[jitterOffset()+dsIdx]||0); }
 
 function negLogLike(p,dd){
@@ -1686,12 +1659,6 @@ function negLogLikeGradient(full,flags,freeScales,dd){
     return g;
 }
 
-// ── Hessian: correctly handles clamped/asymmetric steps at parameter boundaries
-// (e.g. e=0, e=0.99). Symmetric central differences degenerate there because
-// clampFull() forces the backward step to coincide with the point itself,
-// which previously corrupted the curvature estimate and could make LM accept
-// a genuinely worse fit. Now uses an unequal-spacing formula, or a one-sided
-// 3-point formula when one side is fully pinned.
 function negLogLikeHessian(full,flags,freeScales,dd){
     const EPS14=Math.pow(2.22e-16,0.25);
     const freeIdx=[]; for(let j=0;j<full.length;j++) if(flags[j]) freeIdx.push(j);
@@ -1699,7 +1666,6 @@ function negLogLikeHessian(full,flags,freeScales,dd){
     const H=Array.from({length:nFree},()=>new Float64Array(nFree));
     const f0=negLogLike(clampFull(full),dd);
     const hNom=freeIdx.map((j,fi)=>Math.max(freeScales[fi]*EPS14,1e-8));
-    // actual (possibly asymmetric, boundary-clamped) forward/backward step sizes
     const hf=new Array(nFree),hb=new Array(nFree);
     freeIdx.forEach((j,fi)=>{
         const pf=clampFull([...full]); pf[j]+=hNom[fi]; hf[fi]=pf[j]-full[j];
@@ -1725,7 +1691,7 @@ function negLogLikeHessian(full,flags,freeScales,dd){
                     const pb=clampFull([...full]); pb[j]-=hbi;
                     const pb2=clampFull([...full]); pb2[j]-=2*hbi;
                     val=(f0-2*negLogLike(pb,dd)+negLogLike(pb2,dd))/(hbi*hbi);
-                } else val=0; // fully pinned
+                } else val=0;
                 H[fi][fi]=val;
             } else {
                 const hfk=hf[fk],hbk=hb[fk];
@@ -1741,7 +1707,6 @@ function negLogLikeHessian(full,flags,freeScales,dd){
     return H;
 }
 
-// ── getFreeFlags: reads from planet objects ───────────────────────────────────
 function getFreeFlags(){
     const f=[];
     planets.forEach(pl=>{
@@ -1765,7 +1730,6 @@ function clampFull(p){
     return q;
 }
 
-// ── getFullParamVector: reads from planet objects ─────────────────────────────
 function getFullParamVector(){
     if(_planetView==='table') planets.forEach(pl=>syncTableToDOM(pl.pid));
     const p=[];
@@ -1775,7 +1739,6 @@ function getFullParamVector(){
     return p;
 }
 
-// ── setFullParamVector: updates planet objects + all DOM ──────────────────────
 function setFullParamVector(p){
     const KU=getKUnit();
     planets.forEach((pl,i)=>{
@@ -1822,7 +1785,6 @@ function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-8,lambda0=1e-3,lambd
         const cNew=obj(fullNew);
         if(cNew<c){
             full=fullNew; c=cNew; lam=Math.max(lam*lambdaDn,1e-14); lastH=H;
-            // skaleninvariantes Konvergenzkriterium: max. relative Schrittgröße pro Parameter
             let maxRelStep=0;
             for(let i=0;i<dp.length;i++){ const sc=freeScales[i]||1e-8; const rel=Math.abs(dp[i])/sc; if(rel>maxRelStep) maxRelStep=rel; }
             if(maxRelStep<tol) break;
@@ -2109,15 +2071,12 @@ function doFit(){
     showMsg(`Fitting [${nPlStr}] with ${algoNames[algo]}…`,true);
     setFitBtnsDisabled(true);
     let initP=getFullParamVector();
-    const originalCost=negLogLike(clampFull([...initP]),dd); // Referenzkosten vor Seeding/Fit
+    const originalCost=negLogLike(clampFull([...initP]),dd);
     const rvStd=rvStdFromData(dd),scaleS=Math.max(rvStd**2*.01,1e-4);
     datasets.forEach((ds,idx)=>{
         if(getChecked(`fitJitter_${ds.id}`,false)&&initP[jitterOffset()+idx]<1e-20)
             initP[jitterOffset()+idx]=scaleS;
     });
-    // K=0 macht das Modell unabhängig von e/ω/t0 → deren Gradient wird exakt 0
-    // und der Fit bleibt stecken. Kleinen Startwert setzen; e ebenfalls
-    // zurücksetzen, da es bei K=0 bislang wirkungslos (und ggf. beliebig) war.
     planets.forEach((pl,i)=>{
         if(pl.active===false) return;
         const kIdx=i*5+1;
