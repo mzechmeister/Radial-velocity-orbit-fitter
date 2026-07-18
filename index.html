@@ -766,7 +766,7 @@ function _glsHandleCurveClick(sid,period){
 function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x'}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
-    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??1000,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??false,glsSubtract:opts.glsSubtract??{},_afterplotBound:false};
+    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??1000,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},_afterplotBound:false,_cache:null};
 }
 
 // ── Add panel ─────────────────────────────────────────────────────────────────
@@ -843,10 +843,11 @@ function _buildGLSBody(slot,body){
     const extLbl=makeEl('label',{class:'check-item'}); const extCb=makeEl('input',{type:'checkbox'}); extCb.checked=slot.useExt;
     extCb.addEventListener('change',()=>{ slot.useExt=extCb.checked; if(extCb.checked) loadExtGLS(); });
     extLbl.appendChild(extCb); extLbl.appendChild(makeEl('span',{text:' mzechmeister/gls.js'})); optRow.appendChild(extLbl);
+    if(extCb.checked) loadExtGLS();
     optRow.appendChild(makeEl('label',{text:'x-axis',style:{fontSize:'13px',color:'var(--text2)'}}));
     const xSel=makeEl('select',{style:{fontSize:'12px',padding:'2px 4px'}});
     xSel.innerHTML=`<option value="logperiod">log Period [d]</option><option value="period">Period [d]</option><option value="freq">Frequency [d⁻¹]</option>`;
-    xSel.value=slot.xAxis; xSel.addEventListener('change',()=>{ slot.xAxis=xSel.value; updateGLSSlot(sid); }); optRow.appendChild(xSel);
+    xSel.value=slot.xAxis; xSel.addEventListener('change',()=>{ slot.xAxis=xSel.value; renderGLSSlot(sid); }); optRow.appendChild(xSel);
     const computeBtn=makeEl('button',{class:'btn-gls-run',text:'▶ Compute GLS'});
     computeBtn.addEventListener('click',()=>updateGLSSlot(sid)); optRow.appendChild(computeBtn);
     body.appendChild(optRow);
@@ -861,14 +862,14 @@ function _buildGLSBody(slot,body){
 
 function loadExtGLS(){
     if(window.GLS){ showMsg('gls.js already loaded.',true); return; }
+    if(loadExtGLS._loading) return; loadExtGLS._loading=true;
     showMsg('Loading mzechmeister/gls.js…',true);
     const s=document.createElement('script');
     s.src='https://raw.githack.com/mzechmeister/GLS/master/javascript/gls.js';
-    s.onload=()=>showMsg('✅ mzechmeister/gls.js loaded.',true);
+    s.onload=()=>{ showMsg('✅ mzechmeister/gls.js loaded.',true); panels.filter(p=>p.type==='gls'&&p.useExt).forEach(p=>updateGLSSlot(p.sid)); };
     s.onerror=()=>showMsg('❌ Failed to load gls.js',false);
     document.head.appendChild(s);
 }
-
 function removePanel(sid){
     // cleanup zoom sync listeners
     const state=_slotSyncState[sid];
@@ -949,18 +950,11 @@ function updatePlotSlot(sid){
 }
 
 // ── Update GLS slot ───────────────────────────────────────────────────────────
-function updateGLSSlot(sid){
+// ── Compute GLS periodogram (expensive) — cached in slot._cache ───────────────
+function computeGLSData(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
     const dd=buildDatasetsData(),p=getFullParamVector();
-    const{axBase,base,C}=makePlotBase();
-    const xFreq=slot.xAxis==='freq';
-    const xTitle=xFreq?'Frequency [d⁻¹]':'Period <i>P</i> [days]';
-    const xAxisType=slot.xAxis==='logperiod'?'log':'linear';
-    const plotDiv=el(`plotGLS_${sid}`);
-    if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<4){
-        Plotly.react(plotDiv,[],{...base,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
-        el(`glsPeakInfo_${sid}`).textContent='No data.'; _registerGLSListeners(sid); return;
-    }
+    if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<4){ slot._cache=null; return; }
     const pMin=slot.pMin||1,pMax=slot.pMax||1000,ofac=slot.ofac||10;
     const allTs=[],allRVs=[],allErrs=[];
     dd.forEach(({ts,rvs,errs,dsIdx})=>{
@@ -977,13 +971,30 @@ function updateGLSSlot(sid){
     if(slot.useExt&&!useExt) showMsg('⏳ mzechmeister/gls.js not yet loaded.',true);
     if(useExt){
         try{ const r=GLS(allTs,allRVs,{e_y:allErrs,fbeg:fMin,fend:fMax,ofac}); freqs=Array.from(r.f); periods=freqs.map(f=>1/f); power=Array.from(r.p); }
-        catch(err){ showMsg(`❌ GLS error: ${err.message}`,false); return; }
+        catch(err){ showMsg(`❌ GLS error: ${err.message}`,false); slot._cache=null; return; }
     } else {
         const T=dd.reduce((mx,d)=>{ const sp=Math.max(...d.ts)-Math.min(...d.ts); return sp>mx?sp:mx; },0)||(1/fMin);
         const nFreq=Math.max(Math.round(ofac*T*(fMax-fMin)),100);
         freqs=Array.from({length:nFreq},(_,i)=>fMin+(fMax-fMin)*i/(nFreq-1));
         periods=freqs.map(f=>1/f); power=Array.from(computeGLS_builtin(allTs,allRVs,allErrs,freqs));
     }
+    slot._cache={periods,power,freqs,useExt,pMin,pMax};
+}
+
+// ── Render GLS plot (cheap) — reuses slot._cache, e.g. on pure x-axis switch ──
+function renderGLSSlot(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    const{axBase,base,C}=makePlotBase();
+    const xFreq=slot.xAxis==='freq';
+    const xTitle=xFreq?'Frequency [d⁻¹]':'Period <i>P</i> [days]';
+    const xAxisType=slot.xAxis==='logperiod'?'log':'linear';
+    const plotDiv=el(`plotGLS_${sid}`);
+    if(!slot._cache){
+        Plotly.react(plotDiv,[],{...base,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
+        el(`glsPeakInfo_${sid}`).textContent='No data.'; _registerGLSListeners(sid); return;
+    }
+    const{periods,power,freqs,useExt,pMin,pMax}=slot._cache;
+    const fMin=1/pMax,fMax=1/pMin;
     let peakIdx=0,peakPow=0;
     for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
     const peakPeriod=periods[peakIdx],peakFreq=freqs[peakIdx],peakX=xFreq?peakFreq:peakPeriod;
@@ -1002,6 +1013,7 @@ function updateGLSSlot(sid){
     el(`glsPeakInfo_${sid}`).textContent=xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`;
     _registerGLSListeners(sid);
 }
+function updateGLSSlot(sid){ computeGLSData(sid); renderGLSSlot(sid); }
 function _registerGLSListeners(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot||slot._afterplotBound) return;
     const plotDiv=el(`plotGLS_${sid}`); if(!plotDiv) return;
