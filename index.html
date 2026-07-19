@@ -8,7 +8,7 @@
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
-    <script src="https://raw.githack.com/mzechmeister/csvplotter/master/zoom_pan.js"></script>
+    <script src="https://rawcdn.githack.com/mzechmeister/csvplotter/master/zoom_pan.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         input[type=number]::-webkit-outer-spin-button,
@@ -33,7 +33,9 @@
             --tab-active:#0a1628; --tab-inactive:#0d1b2a;
             --legend-bg:rgba(13,27,42,0.8);
         }
-        body { font-family:Arial,sans-serif; background:var(--bg); color:var(--text); transition:background .3s,color .3s; }
+        body { font-family:Arial,sans-serif; font-size:13px; background:var(--bg); color:var(--text); transition:background .3s,color .3s; }
+        /* form controls don't inherit font-size from ancestors by default in browsers' UA stylesheets */
+        button, input, select, textarea { font:inherit; }
 
         /* ── fixed project bar ── */
         .project-bar {
@@ -43,8 +45,9 @@
             background:var(--bg3); border-bottom:1px solid var(--border);
             font-size:13px; transition:background .3s,border-color .3s;
         }
-        .app-title { font-size:15px; font-weight:bold; color:var(--accent); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; }
+        .app-title { font-size:16px; font-weight:bold; color:var(--text2); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; margin-right:10px; }
 
+        /* projectName: styled as editable title, no label */
         #projectName {
             margin-left:8px;
             font-weight:bold; font-size:14px;
@@ -56,16 +59,20 @@
         #projectName:focus { outline:none; border-bottom-color:var(--accent2); }
 
         .project-btns { display:flex; gap:4px; flex:0 0 auto; align-items:center; }
+        /* Save group: margin-left for visual grouping */
         #btnSave { margin-left:8px; }
+        /* Sidebar: margin-left to separate from save group */
         #btnSidebar { margin-left:8px; }
 
         .project-spacer { flex:1; min-width:8px; }
         .theme-btn { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:13px; color:var(--text2); cursor:pointer; transition:background .2s; }
         .theme-btn:hover { background:var(--bg2); }
 
+        /* GitHub link in project bar */
         .github-link { color:var(--text2); flex:0 0 auto; opacity:.55; transition:opacity .2s,color .2s; display:flex; align-items:center; text-decoration:none; }
         .github-link:hover { opacity:1; color:var(--text); }
 
+        /* ── sidebar resize handle ── */
         #sidebarResizeHandle {
             display:none; position:fixed; top:var(--bar-h); bottom:0;
             left:calc(100vw - var(--sidebar-w) - 1px); width:4px;
@@ -75,6 +82,7 @@
         body.sidebar-mode #sidebarResizeHandle { display:block; }
         body.sidebar-mode #paramPanel { border-left:none; }
 
+        /* ── scroll containers ── */
         #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
         body.sidebar-mode { overflow:hidden; height:100vh; }
         body.sidebar-mode #leftScroll { position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w); overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
@@ -86,6 +94,8 @@
         em { font-style:italic; }
         .panel-header { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
         .panel-header h2 { color:var(--accent); font-size:16px; flex:0 0 auto; margin:0; }
+        .panel-header-summary { font-size:12px; color:var(--text2); margin-left:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; display:none; }
+        .panel-header-summary.visible { display:inline-block; }
         .collapse-arrow { color:var(--accent); font-size:14px; flex:0 0 auto; transition:transform .2s; }
         .collapse-arrow.open  { transform:rotate(0deg); }
         .collapse-arrow.closed{ transform:rotate(-90deg); }
@@ -93,14 +103,15 @@
         .panel-body.hidden { display:none; }
         .data-panel { flex:1.4; min-width:0; overflow:hidden; }
 
-        /* ── dataset tabs ── */
+        /* ── dataset tabs: inactive = var(--bg2) like planet All/+ tabs ── */
         .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
-        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; color:var(--text2); cursor:pointer; font-size:13px; user-select:none; transition:background .2s,color .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
+        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; color:var(--text2); cursor:pointer; user-select:none; transition:background .2s,color .2s,opacity .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
         .ds-tab:not(.active) { background:var(--bg2); }
         .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom:1px solid var(--tab-active); }
         .ds-tab.drag-over { background:var(--accent2); opacity:.7; }
+        .ds-tab.inactive { opacity:.5; }
         .ds-tab .tab-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-        .ds-tab .tab-rename-input { flex:1; min-width:0; width:80px; font-size:13px; font-weight:inherit; background:var(--input-bg); color:var(--text); border:1px solid var(--accent2); border-radius:3px; padding:0 4px; }
+        .ds-tab .tab-rename-input { flex:1; min-width:0; width:80px; font-weight:inherit; background:var(--input-bg); color:var(--text); border:1px solid var(--accent2); border-radius:3px; padding:0 4px; }
         .ds-tab .tab-rename-input:focus { outline:none; }
         .ds-tab .close-btn { font-size:13px; line-height:1; background:none; border:none; cursor:pointer; color:var(--text2); opacity:.55; padding:0; flex:0 0 auto; transition:opacity .15s; }
         .ds-tab .close-btn:hover { opacity:1; color:#f72585; }
@@ -108,7 +119,8 @@
         .ds-tab-add:hover { background:var(--tab-inactive); }
         .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
         .ds-pane { display:none; } .ds-pane.active { display:block; }
-        .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; font-size:12px; color:var(--text2); }
+        .ds-header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; font-size:12px; color:var(--text2); transition:opacity .2s; }
+        .ds-header.inactive { opacity:.5; }
         .ds-header label { white-space:nowrap; }
         .ds-header input[type=number] { width:80px; padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
         .ds-header input[type=number]:focus { outline:none; border-color:var(--accent2); }
@@ -146,11 +158,12 @@
         .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
         /* ds-editor-wrap: common wrapper for CodeMirror AND preview so the colour bar
            is visible in both view modes */
-        .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s; }
+        .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s,opacity .2s; }
+        .ds-editor-wrap.inactive { opacity:.5; }
         input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         input[type=number]:focus,input[type=text]:focus,select:focus { outline:none; border-color:var(--accent2); }
         input[type=checkbox] { accent-color:var(--accent2); width:15px; height:15px; cursor:pointer; }
-        select { padding:4px 8px; font-size:13px; }
+        select { padding:4px 8px; }
         .url-input { display:flex; align-items:center; gap:6px; width:100%; margin-top:6px; }
         .url-input input[type=text] { flex:1; padding:4px 6px; font-size:13px; }
 
@@ -158,10 +171,12 @@
         .param-panel { flex:0 0 540px; position:relative; }
         .param-list { display:flex; flex-direction:column; gap:6px; }
         .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
-        .param-item label { font-size:13px; color:var(--text2); text-align:right; }
+        /* shared label styling: planet Tab view (.param-item label) and Table view (.pt-label) */
+        .param-item label,
+        .pt-label { color:var(--text2); text-align:right; }
         /* shared number-input styling: planet Tab view (.param-item) and Table view (.pt-cell) */
         .param-item input[type=number],
-        .pt-cell input[type=number] { padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .pt-cell input[type=number] { padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .param-item input[type=number]:focus,
         .pt-cell input[type=number]:focus { outline:none; border-color:var(--accent2); }
         .param-item input[type=number] { width:100%; }
@@ -169,7 +184,7 @@
         .pt-cell-top input[type=checkbox] { width:14px; height:14px; cursor:pointer; accent-color:var(--accent2); margin:0; }
         .param-fit-cb { justify-self:center; }
         .param-fit-cb:not(:checked)+label { opacity:.35; }
-        .param-sigma { font-size:11px; color:var(--text2); font-family:monospace; white-space:nowrap; }
+        .param-sigma { font-size:12px; color:var(--text2); font-family:monospace; white-space:nowrap; }
         .derived-row { display:flex; align-items:center; gap:6px; }
         .derived-row .d-label { flex:0 0 160px; font-size:13px; color:var(--text2); text-align:right; display:inline-block; line-height:1.5; }
         .derived-row .d-val { flex:0 0 130px; min-width:0; font-size:15px; font-weight:bold; color:var(--val); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -192,6 +207,7 @@
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
+        /* planet tabs: inactive = var(--bg2), same as All/+ */
         .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
         .planet-tab:not(.active) { background:var(--bg2); }
         .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
@@ -203,34 +219,35 @@
         .planet-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--bg3); padding:8px; }
         .planet-block { display:none; margin-bottom:6px; } .planet-block.active { display:block; } .planet-block.inactive { opacity:.45; }
         .planet-header { display:flex; align-items:center; gap:6px; user-select:none; margin-bottom:8px; }
-        .planet-name-input { font-size:13px; font-weight:bold; background:none; border:none; border-bottom:1px solid transparent; color:inherit; width:100px; cursor:text; outline:none; padding:0; }
+        .planet-name-input { font-weight:bold; background:none; border:none; border-bottom:1px solid transparent; color:inherit; width:100px; cursor:text; outline:none; padding:0; }
         .planet-name-input:focus { border-bottom-color:var(--accent2); background:var(--input-bg); }
         .planet-body { display:flex; flex-direction:column; gap:6px; }
         .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
         .planet-ctrl:hover { opacity:1; } .planet-ctrl.del:hover { color:#f72585; }
-        .gamma-row { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; border-left:3px solid transparent; padding-left:5px; }
-        .gamma-row label { font-size:13px; color:var(--text2); text-align:right; }
-        .gamma-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .gamma-row { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; border-left:3px solid transparent; padding-left:5px; transition:opacity .2s; }
+        .gamma-row label { color:var(--text2); text-align:right; }
+        .gamma-row input[type=number] { width:100%; padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .gamma-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .gamma-sigma { font-size:11px; color:var(--text2); font-family:monospace; }
+        .gamma-sigma { font-size:12px; color:var(--text2); font-family:monospace; }
 
         /* ── shared grid rows ── */
         .bjd0-row,.starmass-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row { grid-template-columns:160px 90px auto auto; }
         .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
+        /* gamma-ref-row: grid only, no standalone border (inside inset-box now) */
         .gamma-ref-row { display:grid; grid-template-columns:160px 90px auto auto; align-items:center; gap:6px; padding:4px 0; }
-        .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { font-size:13px; color:var(--text2); text-align:right; }
-        .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; font-size:13px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { color:var(--text2); text-align:right; }
+        .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .bjd0-row input[type=number]:focus,.starmass-row input[type=number]:focus,.gamma-ref-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .unit-lbl { font-size:12px; color:var(--text2); white-space:nowrap; text-align:right; }
+        .unit-lbl { color:var(--text2); white-space:nowrap; text-align:right; }
         .starmass-row select,.gamma-ref-row select { font-size:12px; padding:2px 4px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
-        .param-label { font-size:13px; color:var(--text2); text-align:right; display:inline-block; line-height:1.5; }
+        .param-label { color:var(--text2); text-align:right; display:inline-block; line-height:1.5; }
         .fit-algo-row { display:flex; align-items:center; gap:8px; }
-        .fit-algo-row label { flex:0 0 160px; font-size:13px; color:var(--text2); text-align:right; }
+        .fit-algo-row label { flex:0 0 160px; color:var(--text2); text-align:right; }
         .fit-algo-row select { flex:0 0 130px; }
         .btn-row { display:flex; gap:8px; margin-top:10px; align-items:center; flex-wrap:wrap; }
         .btn-row-spacer { flex:1; }
-        button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold; transition:background .2s,filter .2s; }
+        button { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-weight:bold; transition:background .2s,filter .2s; }
         button:not(.theme-btn):not(.view-toggle button):hover { filter:brightness(.88); }
         .btn-fit { background:#4cc9f0; color:#000; }
         .btn-fit-top { background:#4cc9f0; color:#000; padding:3px 10px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; transition:background .2s,filter .2s; flex:0 0 auto; min-width:64px; text-align:center; }
@@ -248,6 +265,11 @@
         .btn-saveas { background:#4a3570; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-open   { background:#2d6a4f; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-gls-run{ background:#e63946; color:#fff; padding:6px 14px; font-size:12px; }
+        /* .busy instead of :disabled — disabled buttons ignore `cursor` in most browsers,
+           so cursor:wait never actually rendered. Kept clickable, guarded by JS reentrancy check. */
+        .btn-gls-run.busy { opacity:1; filter:none; cursor:wait; }
+        .btn-gls-run.busy span { display:none; }
+        .btn-gls-run.busy::before { content:'⏳ Computing…'; animation:fitbtn 1s step-start infinite; }
         .btn-view   { background:none; border:1px solid var(--border); border-radius:5px; padding:4px 8px; font-size:12px; color:var(--text2); cursor:pointer; }
         .btn-view:hover { background:var(--bg3); } .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
         .add-panel-row { display:flex; gap:8px; margin-bottom:20px; }
@@ -261,12 +283,13 @@
         #planetTableWrap { overflow-x:auto; display:flex; gap:8px; align-items:flex-start; }
         .btn-add-planet-table { padding:4px 10px; border-radius:6px; border:1px dashed var(--border); background:none; color:var(--accent2); cursor:pointer; font-size:15px; font-weight:bold; line-height:1; transition:background .2s; flex:0 0 auto; }
         .btn-add-planet-table:hover { background:var(--bg3); }
-        .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(90px,130px)); gap:3px 8px; align-items:start; font-size:13px; min-width:0; }
+        .planet-table { display:grid; grid-template-columns:130px repeat(var(--n-planets,1), minmax(90px,130px)); gap:3px 8px; align-items:start; min-width:0; }
         .pt-corner {} .pt-head { display:flex; align-items:center; justify-content:space-between; padding:3px 4px; font-weight:bold; color:var(--accent); border-bottom:2px solid var(--border); gap:3px; }
-        .pt-head input.planet-name-input { font-size:13px; width:65px; }
-        .pt-label { font-size:12px; color:var(--text2); text-align:right; padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
+        .pt-head input.planet-name-input { width:65px; }
+        .pt-label { padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
         .pt-label.sep { border-top:1px solid var(--border); padding-top:5px; margin-top:3px; }
         .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
+        /* fit checkbox RIGHT of input */
         .pt-cell-top { display:flex; align-items:center; gap:3px; }
         .pt-cell-top input[type=checkbox] { flex:0 0 auto; }
         .pt-cell input[type=number] { flex:1; min-width:0; }
@@ -283,20 +306,20 @@
         .panel-slot { padding:10px; }
         .panel-slot-header { display:flex; align-items:center; gap:8px; user-select:none; margin-bottom:0; cursor:grab; }
         .panel-slot-header:active { cursor:grabbing; }
-        .panel-slot-header h2 { color:var(--accent); font-size:16px; flex:0 0 auto; margin:0; pointer-events:none; }
-        .panel-slot-title { display:flex; align-items:center; gap:8px; flex:1; pointer-events:none; }
+        .panel-slot-header h2 { color:var(--accent); font-size:16px; flex:1 1 auto; min-width:0; margin:0; pointer-events:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .panel-slot-title { display:flex; align-items:center; gap:8px; flex:1; min-width:0; pointer-events:none; }
         .panel-slot-close { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:16px; padding:0 4px; line-height:1; transition:opacity .15s; flex:0 0 auto; pointer-events:all; }
         .panel-slot-close:hover { opacity:1; color:#f72585; filter:none; }
         .panel-slot.drag-over { border-top:3px solid var(--accent2); }
         .plot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
-        .plot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
-        .check-item { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); cursor:pointer; }
+        .plot-options label { color:var(--text2); white-space:nowrap; }
+        .check-item { display:flex; align-items:center; gap:6px; color:var(--text2); cursor:pointer; }
         .plot-rv  { width:100%; height:340px; } .plot-res { width:100%; height:160px; }
         .plot-divider { height:1px; background:var(--border); margin:3px 0; }
         .gls-slot-options { display:flex; gap:10px; align-items:center; padding:6px 0 8px 0; flex-wrap:wrap; }
-        .gls-slot-options label { font-size:13px; color:var(--text2); white-space:nowrap; }
-        .gls-slot-options input[type=number] { width:80px; padding:3px 6px; font-size:13px; }
-        .gls-subtract-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:13px; color:var(--text2); margin-bottom:8px; min-height:24px; }
+        .gls-slot-options label { color:var(--text2); white-space:nowrap; }
+        .gls-slot-options input[type=number] { width:80px; padding:3px 6px; }
+        .gls-subtract-row { display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; font-size:13px; color:var(--text2); margin-bottom:8px; min-height:24px; }
         .gls-planet-cb { display:inline-flex; align-items:center; gap:4px; cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid transparent; transition:background .15s; }
         .gls-planet-cb:hover { background:var(--bg3); }
         .gls-planet-cb input { accent-color:var(--accent2); width:13px; height:13px; }
@@ -321,16 +344,20 @@
     <button class="btn-open" id="btnOpen" style="padding:3px 8px;font-size:12px;">📂</button>
     <input type="file" id="projectFileInput" accept=".rvproj,.json" style="display:none;">
 
+    <!-- projectName: no label, styled as editable title -->
     <input type="text" id="projectName" value="untitled" placeholder="project name">
 
+    <!-- Save group -->
     <div class="project-btns">
         <button class="btn-save"   id="btnSave"  >💾 Save</button>
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
     </div>
 
+    <!-- View/Theme group: margin-left separates from save group -->
     <button class="btn-view"  id="btnSidebar">⊳ Sidebar</button>
     <button class="theme-btn" id="btnTheme"  >🌓</button>
 
+    <!-- GitHub link -->
     <a class="github-link"
        href="https://github.com/mzechmeister/Radial-velocity-orbit-fitter"
        target="_blank" rel="noopener"
@@ -358,6 +385,7 @@
             <div class="panel-header" id="dataHeader">
                 <span class="collapse-arrow open" id="dataArrow">▼</span>
                 <h2>📂 Data</h2>
+                <span class="panel-header-summary" id="dataHeaderSummary"></span>
             </div>
             <div class="panel-body" id="dataBody">
                 <div class="ds-tabs" id="dsTabs"></div>
@@ -787,7 +815,7 @@ function _buildPanelDOM(slot){
     const arrowSpan=makeEl('span',{class:'collapse-arrow open',id:`slotArrow_${sid}`,text:'▼',style:{pointerEvents:'none'}});
     const titleSpan=makeEl('span',{class:'panel-slot-title'});
     titleSpan.appendChild(arrowSpan);
-    titleSpan.appendChild(makeEl('h2',{text:`${type==='plot'?'📈':'🔭'} ${type==='plot'?'Plot':'GLS'} ${sid}`}));
+    titleSpan.appendChild(makeEl('h2',{id:`slotTitle_${sid}`,text:`${type==='plot'?'📈':'🔭'} ${type==='plot'?'Plot':'GLS'} ${sid}`}));
     const closeBtn=makeEl('button',{class:'panel-slot-close',title:'Remove',html:'×'});
     closeBtn.addEventListener('click',e=>{ e.stopPropagation(); removePanel(sid); });
     const header=makeEl('div',{class:'panel-slot-header',id:`slotHeader_${sid}`,draggable:true});
@@ -813,7 +841,7 @@ function _buildPlotBody(slot,body){
     const foldSel=makeEl('select',{id:`foldSelect_${sid}`,style:{fontSize:'13px',padding:'3px 6px'}});
     foldSel.innerHTML='<option value="none">Time series</option>';
     foldSel.addEventListener('change',()=>{ slot.foldPid=foldSel.value==='none'?null:parseInt(foldSel.value); updatePlotSlot(sid); });
-    optRow.appendChild(makeEl('label',{text:'Phase-fold:',style:{fontSize:'13px',color:'var(--text2)'}}));
+    optRow.appendChild(makeEl('label',{text:'Phase-fold:'}));
     optRow.appendChild(foldSel);
     function mkCb(lbl,val,fn){ const l=makeEl('label',{class:'check-item'}); const cb=makeEl('input',{type:'checkbox'}); cb.checked=val; cb.addEventListener('change',()=>{ fn(cb.checked); updatePlotSlot(sid); }); l.appendChild(cb); l.appendChild(makeEl('span',{text:' '+lbl})); return l; }
     optRow.appendChild(mkCb('Show residuals',slot.showRes,   v=>slot.showRes=v));
@@ -834,7 +862,7 @@ function _buildPlotBody(slot,body){
 function _buildGLSBody(slot,body){
     const sid=slot.sid;
     const optRow=makeEl('div',{class:'gls-slot-options'});
-    function numOpt(lbl,key,min,step){ optRow.appendChild(makeEl('label',{html:lbl,style:{fontSize:'13px',color:'var(--text2)'}})); const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)}); inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); }); optRow.appendChild(inp); }
+    function numOpt(lbl,key,min,step){ optRow.appendChild(makeEl('label',{html:lbl})); const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)}); inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); }); optRow.appendChild(inp); }
     numOpt('<em>P</em><sub>min</sub>','pMin',0.01,0.1);
     numOpt('<em>P</em><sub>max</sub>','pMax',1,10);
     numOpt('ofac','ofac',1,1);
@@ -844,11 +872,12 @@ function _buildGLSBody(slot,body){
     const extLbl=makeEl('label',{class:'check-item'}); const extCb=makeEl('input',{type:'checkbox'}); extCb.checked=slot.useExt;
     extCb.addEventListener('change',()=>{ slot.useExt=extCb.checked; if(extCb.checked) loadExtGLS(); });
     extLbl.appendChild(extCb); extLbl.appendChild(makeEl('span',{text:' mzechmeister/gls.js'})); optRow.appendChild(extLbl);
-    optRow.appendChild(makeEl('label',{text:'x-axis',style:{fontSize:'13px',color:'var(--text2)'}}));
+    optRow.appendChild(makeEl('label',{text:'x-axis'}));
     const xSel=makeEl('select',{style:{fontSize:'12px',padding:'2px 4px'}});
     xSel.innerHTML=`<option value="logperiod">log Period [d]</option><option value="period">Period [d]</option><option value="freq">Frequency [d⁻¹]</option>`;
     xSel.value=slot.xAxis; xSel.addEventListener('change',()=>{ slot.xAxis=xSel.value; renderGLSSlot(sid); }); optRow.appendChild(xSel);
-    const computeBtn=makeEl('button',{class:'btn-gls-run',text:'▶ Compute GLS'});
+    const computeBtn=makeEl('button',{class:'btn-gls-run',id:`glsComputeBtn_${sid}`});
+    computeBtn.appendChild(makeEl('span',{text:'▶ Compute GLS'}));
     computeBtn.addEventListener('click',()=>updateGLSSlot(sid)); optRow.appendChild(computeBtn);
     body.appendChild(optRow);
     body.appendChild(makeEl('div',{class:'gls-subtract-row',id:`glsSubRow_${sid}`}));
@@ -866,9 +895,12 @@ function loadExtGLS(){
     if(loadExtGLS._loading) return; loadExtGLS._loading=true;
     showMsg('Loading mzechmeister/gls.js…',true);
     const s=document.createElement('script');
-    s.src='https://raw.githack.com/mzechmeister/GLS/master/javascript/gls.js';
+    // rawcdn.githack.com = production/cached mirror (via jsDelivr), safe for repeated
+    // automatic loads. raw.githack.com is dev-only, rate-limited, and can silently
+    // fail on frequent page reloads, leaving the app stuck on the builtin fallback.
+    s.src='https://rawcdn.githack.com/mzechmeister/GLS/master/javascript/gls.js';
     s.onload=()=>{ showMsg('✅ mzechmeister/gls.js loaded.',true); panels.filter(p=>p.type==='gls'&&p.useExt).forEach(p=>updateGLSSlot(p.sid)); };
-    s.onerror=()=>showMsg('❌ Failed to load gls.js',false);
+    s.onerror=()=>{ loadExtGLS._loading=false; showMsg('❌ Failed to load gls.js — falling back to built-in GLS.',false); };
     document.head.appendChild(s);
 }
 
@@ -918,6 +950,26 @@ function _attachSlotZoomSync(sid){
     eRs.on('plotly_relayout',state.rsL);
 }
 
+// ── Panel title updates ────────────────────────────────────────────────────────
+function updatePlotSlotTitle(slot){
+    const h2=el(`slotTitle_${slot.sid}`); if(!h2) return;
+    const foldLbl=slot.foldPid!==null?(planets.find(p=>p.pid===slot.foldPid)?.name||'—'):'Time series';
+    h2.textContent=`📈 RV ${foldLbl}`;
+}
+function updateGLSSlotTitle(slot){
+    const h2=el(`slotTitle_${slot.sid}`); if(!h2) return;
+    let peakStr='—';
+    if(slot._cache){
+        const{periods,power}=slot._cache;
+        let peakIdx=0,peakPow=0;
+        for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
+        if(power.length) peakStr=`${periods[peakIdx].toFixed(3)} d`;
+    }
+    const subtracted=planets.filter(pl=>pl.active!==false&&slot.glsSubtract?.[pl.pid]!==false);
+    const rvLbl=['RV',...subtracted.map(pl=>pl.name)].join(' − ');
+    h2.textContent=`🔭 GLS (P=${peakStr}, ${rvLbl})`;
+}
+
 // ── Update plot slot ──────────────────────────────────────────────────────────
 function updatePlotSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
@@ -926,6 +978,7 @@ function updatePlotSlot(sid){
     const P=foldPlIdx>=0?p[foldPlIdx*5]:0;
     const{trRV,trRes}=buildTraces(p,slot.foldPid,P,slot);
     const dd=buildDatasetsData();
+    updatePlotSlotTitle(slot);
     if(dd.length) displayFitStats(p,dd);
     updateDerived();
     const{axBase,base,C}=makePlotBase();
@@ -985,6 +1038,7 @@ function computeGLSData(sid){
 // ── Render GLS plot (cheap) — reuses slot._cache, e.g. on pure x-axis switch ──
 function renderGLSSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    updateGLSSlotTitle(slot);
     const{axBase,base,C}=makePlotBase();
     const xFreq=slot.xAxis==='freq';
     const xTitle=xFreq?'Frequency [d⁻¹]':'Period <i>P</i> [days]';
@@ -1015,7 +1069,15 @@ function renderGLSSlot(sid){
     _registerGLSListeners(sid);
 }
 
-function updateGLSSlot(sid){ computeGLSData(sid); renderGLSSlot(sid); }
+function updateGLSSlot(sid){
+    const btn=el(`glsComputeBtn_${sid}`);
+    if(btn?.classList.contains('busy')) return; // already computing, ignore reentrant clicks
+    if(btn) btn.classList.add('busy');
+    setTimeout(()=>{
+        try{ computeGLSData(sid); renderGLSSlot(sid); }
+        finally{ if(btn) btn.classList.remove('busy'); }
+    },30);
+}
 
 function _registerGLSListeners(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot||slot._afterplotBound) return;
@@ -1266,7 +1328,7 @@ function addPlanet(opts={}){
     const allTs=datasets.flatMap(ds=>(ds.rawRows||[]).map(r=>r.t+getDsT0Ref(ds)-bjd0));
     const tMean=allTs.length?mean(allTs):0,tSpan=allTs.length>=2?Math.max(...allTs)-Math.min(...allTs):10;
     const pl={pid,name:opts.name??defaultPlanetName(i),P:opts.P??Math.max(tSpan/2,1),
-        K_ms:opts.K_ms??toMs(opts.K??50,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0:opts.t0??tMean,
+        K_ms:opts.K_ms??toMs(opts.K??1,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0:opts.t0??tMean,
         fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
         fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
         active:opts.active??true,glsSubtract:opts.glsSubtract??true};
@@ -1381,9 +1443,11 @@ function addDataset(initialText='',initialName=null,opts={}){
     const col=opts.color||PALETTE[idx%PALETTE.length];
     const rvUnit=opts.rvUnit||'m/s',sym=opts.symbol||'circle';
     const opacity=opts.opacity!=null?opts.opacity:1.0,size=opts.size||8,t0ref=opts.t0ref||0;
+    const dsActive=opts.active??true;
     const pane=makeEl('div',{class:'ds-pane',id:`pane_${id}`});
     pane.innerHTML=`
     <div class="ds-header" id="dsHeader_${id}">
+        <input type="checkbox" id="dsActive_${id}" title="Include dataset in fit/plots"${dsActive?' checked':''} style="width:14px;height:14px;accent-color:${col};cursor:pointer;flex:0 0 auto;margin-right:2px;">
         <input type="color" id="dsColor_${id}" value="${col}" title="Colour" style="width:26px;height:22px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
         <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
@@ -1415,6 +1479,7 @@ function addDataset(initialText='',initialName=null,opts={}){
         <button id="btnClear_${id}">Clear</button>
     </div>`;
     el('dsPanes').appendChild(pane);
+    el(`dsActive_${id}`).addEventListener('change',()=>onDsActiveToggle(id));
     el(`btnRaw_${id}`).addEventListener('click',()=>setDsView(id,'raw'));
     el(`btnPrev_${id}`).addEventListener('click',()=>setDsView(id,'preview'));
     el(`dsColor_${id}`).addEventListener('change',()=>onDsStyleChange(id));
@@ -1436,7 +1501,18 @@ function addDataset(initialText='',initialName=null,opts={}){
     const gammaMs=opts.gammaMs!=null?opts.gammaMs:toMs(opts.gamma||0,rvUnit);
     datasets.push({id,name,editor,rawRows:[],gamma:gammaMs,rvUnit,color:col,symbol:sym,opacity,size,t0ref});
     renderTabs(); switchTab(id); applyThemeToEditors(); rebuildGammaUI();
+    applyDsActiveStyle(id);
     if(initialText){ rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
+}
+function applyDsActiveStyle(id){
+    const active=getChecked(`dsActive_${id}`,true);
+    el(`dsHeader_${id}`)?.classList.toggle('inactive',!active);
+    el(`dsEditorWrap_${id}`)?.classList.toggle('inactive',!active);
+}
+function onDsActiveToggle(id){
+    applyDsActiveStyle(id);
+    renderTabs();
+    clearErrors(); rebuildGammaUI(); updateAllPanels(); refreshGLSOverlays();
 }
 function onDsStyleChange(id){
     const ds=dsById(id); if(!ds) return;
@@ -1444,6 +1520,7 @@ function onDsStyleChange(id){
     const ew=el(`dsEditorWrap_${id}`); if(ew) ew.style.borderLeftColor=col;
     const tab=el(`tab_${id}`); if(tab) tab.style.borderTop=`3px solid ${col}`;
     rebuildGammaUI(); updateAllPanels();
+    updateDataHeaderSummary();
 }
 function onDsUnitChange(id){ rebuildGammaUI(); updateStatsBar(id); updateAllPanels(); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
 function removeDataset(id){
@@ -1452,12 +1529,28 @@ function removeDataset(id){
     renderTabs(); switchTab(datasets[Math.min(idx,datasets.length-1)].id); rebuildGammaUI(); updateAllPanels();
 }
 
+// ── Data panel header summary (shown when panel is collapsed) ─────────────────
+function updateDataHeaderSummary(){
+    const summary=el('dataHeaderSummary'); if(!summary) return;
+    const collapsed=el('dataBody').classList.contains('hidden');
+    summary.innerHTML='';
+    if(collapsed&&datasets.length){
+        datasets.forEach((ds,i)=>{
+            const isActive=getChecked(`dsActive_${ds.id}`,true);
+            const col=getDsColor(ds,i);
+            summary.appendChild(makeEl('span',{text:ds.name,style:{color:col,opacity:isActive?'1':'.45',textDecoration:isActive?'none':'line-through',marginRight:'8px'}}));
+        });
+        summary.classList.add('visible');
+    } else summary.classList.remove('visible');
+}
+
 // ── Render tabs ───────────────────────────────────────────────────────────────
 function renderTabs(){
     const bar=el('dsTabs'); bar.innerHTML='';
     datasets.forEach((ds,i)=>{
         const col=getDsColor(ds,i);
-        const tab=makeEl('div',{class:'ds-tab'+(ds.id===activeId?' active':''),id:`tab_${ds.id}`,title:'Double-click to rename',style:{borderTop:`3px solid ${col}`}});
+        const isActive=getChecked(`dsActive_${ds.id}`,true);
+        const tab=makeEl('div',{class:'ds-tab'+(ds.id===activeId?' active':'')+(isActive?'':' inactive'),id:`tab_${ds.id}`,title:'Double-click to rename',style:{borderTop:`3px solid ${col}`}});
         const lbl=makeEl('span',{class:'tab-label',text:ds.name});
         const closeBtn=makeEl('button',{class:'close-btn',title:'Remove',text:'×',style:{display:datasets.length>1?'':'none'}});
         closeBtn.addEventListener('click',e=>{ e.stopPropagation(); removeDataset(ds.id); });
@@ -1468,6 +1561,7 @@ function renderTabs(){
     });
     const addBtn=makeEl('button',{class:'ds-tab-add',title:'Add dataset',text:'+'});
     addBtn.addEventListener('click',()=>addDataset()); bar.appendChild(addBtn);
+    updateDataHeaderSummary();
 }
 function startRename(id,labelSpan){
     const ds=dsById(id);
@@ -1498,6 +1592,7 @@ function applyThemeToEditors(){
 function togglePanel(bodyId,arrowId){
     const body=el(bodyId),arrow=el(arrowId),open=!body.classList.contains('hidden');
     body.classList.toggle('hidden',open); arrow.classList.toggle('open',!open); arrow.classList.toggle('closed',open);
+    if(bodyId==='dataBody') updateDataHeaderSummary();
 }
 
 // ── Unit propagation ──────────────────────────────────────────────────────────
@@ -1546,7 +1641,9 @@ function makeGammaRowGamma(ds,idx,KU){
     const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
     inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
     const sig=makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`});
-    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col}});
+    const isActive=getChecked(`dsActive_${ds.id}`,true);
+    if(!isActive){ fitCb.disabled=true; inp.disabled=true; }
+    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:isActive?'1':'.4'}});
     [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
 }
 function makeGammaRowJitter(ds,idx,KU){
@@ -1560,7 +1657,9 @@ function makeGammaRowJitter(ds,idx,KU){
     const inp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
     inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
     const sig=makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`});
-    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:'.85'}});
+    const isActive=getChecked(`dsActive_${ds.id}`,true);
+    if(!isActive){ fitCb.disabled=true; inp.disabled=true; }
+    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:isActive?'.85':'.4'}});
     [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
 }
 
@@ -1617,7 +1716,7 @@ function parseDatasetMs(id){
     return{ts:adjT(raw.ts),rvs:convV(raw.rvs),errs:convE(raw.errs),lineNums:raw.lineNums,
         clipped:{ts:adjT(raw.clipped.ts),rvs:convV(raw.clipped.rvs),errs:convE(raw.clipped.errs),lineNums:raw.clipped.lineNums}};
 }
-function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ const d=parseDatasetMs(ds.id); return d&&(d.ts.length||d.clipped.ts.length)?[{...d,dsIdx:idx,dsId:ds.id}]:[]; }); }
+function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ if(!getChecked(`dsActive_${ds.id}`,true)) return []; const d=parseDatasetMs(ds.id); return d&&(d.ts.length||d.clipped.ts.length)?[{...d,dsIdx:idx,dsId:ds.id}]:[]; }); }
 
 // ── RV model ──────────────────────────────────────────────────────────────────
 function solveKepler(M,e,tol=1e-9){ let E=M; for(let i=0;i<100;i++){ const dE=(M-E+e*Math.sin(E))/(1-e*Math.cos(E)); E+=dE; if(Math.abs(dE)<tol) break; } return E; }
@@ -1707,6 +1806,7 @@ function negLogLikeHessian(full,flags,freeScales,dd){
     return H;
 }
 
+// ── getFreeFlags: reads from planet objects ───────────────────────────────────
 function getFreeFlags(){
     const f=[];
     planets.forEach(pl=>{
@@ -1717,8 +1817,8 @@ function getFreeFlags(){
         f.push(active&&(pl.fitOmega??true));
         f.push(active&&(pl.fitT0  ??true));
     });
-    datasets.forEach(ds=>f.push(getChecked(`fitGamma_${ds.id}`)));
-    datasets.forEach(ds=>f.push(getChecked(`fitJitter_${ds.id}`,false)));
+    datasets.forEach(ds=>f.push(getChecked(`dsActive_${ds.id}`,true)&&getChecked(`fitGamma_${ds.id}`)));
+    datasets.forEach(ds=>f.push(getChecked(`dsActive_${ds.id}`,true)&&getChecked(`fitJitter_${ds.id}`,false)));
     return f;
 }
 const compressParams=(full,flags)=>full.filter((_,j)=>flags[j]);
@@ -1730,6 +1830,7 @@ function clampFull(p){
     return q;
 }
 
+// ── getFullParamVector: reads from planet objects ─────────────────────────────
 function getFullParamVector(){
     if(_planetView==='table') planets.forEach(pl=>syncTableToDOM(pl.pid));
     const p=[];
@@ -1739,6 +1840,7 @@ function getFullParamVector(){
     return p;
 }
 
+// ── setFullParamVector: updates planet objects + all DOM ──────────────────────
 function setFullParamVector(p){
     const KU=getKUnit();
     planets.forEach((pl,i)=>{
@@ -2116,6 +2218,7 @@ function buildProjectJSON(){
     const dsData=datasets.map((ds,idx)=>({
         name:ds.name,text:ds.editor.getValue(),t0ref:getNumVal(`t0ref_${ds.id}`),
         rvUnit:el(`rvUnit_${ds.id}`)?.value||'m/s',
+        active:getChecked(`dsActive_${ds.id}`,true),
         gammaMs:p[gammaOffset()+idx]||0,
         jitterMs:fromMs(Math.sqrt(Math.max(0,p[jitterOffset()+idx]||0)),KU),
         color:getDsColor(ds,idx),symbol:getDsSymbol(ds),opacity:getDsOpacity(ds),size:getDsSize(ds),
@@ -2181,7 +2284,7 @@ function loadProjectFromObj(proj){
     setPlanetView(o.planetView||'table');
     rebuildGLSSubtractRows();
     proj.datasets.forEach(saved=>{
-        addDataset(saved.text||'',saved.name||'Dataset',{t0ref:saved.t0ref||saved.bjd0||0,rvUnit:saved.rvUnit||'m/s',gammaMs:saved.gammaMs||0,color:saved.color,symbol:saved.symbol,opacity:saved.opacity,size:saved.size});
+        addDataset(saved.text||'',saved.name||'Dataset',{t0ref:saved.t0ref||saved.bjd0||0,rvUnit:saved.rvUnit||'m/s',gammaMs:saved.gammaMs||0,color:saved.color,symbol:saved.symbol,opacity:saved.opacity,size:saved.size,active:saved.active});
         const ds=datasets[datasets.length-1];
         setNumVal(`pGamma_${ds.id}`,fromMs(saved.gammaMs??0,KU),4);
         if(saved.jitterMs!=null) setNumVal(`pJitter_${ds.id}`,saved.jitterMs,4);
