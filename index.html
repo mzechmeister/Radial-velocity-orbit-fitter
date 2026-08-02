@@ -802,7 +802,7 @@ function _glsHandleCurveClick(sid,period){
 }
 
 // ── Default opts ──────────────────────────────────────────────────────────────
-function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x'}; }
+function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set()}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
     return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??1000,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},_afterplotBound:false,_cache:null};
@@ -980,6 +980,21 @@ function updateGLSSlotTitle(slot){
     h2.textContent=`🔭 GLS (P=${peakStr}, ${rvLbl})`;
 }
 
+// ── Sync legend-click visibility between RV and Residuals plots ──────────────
+function _attachLegendClickHandler(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._legendClickBound) return;
+    const eRV=el(`plotRV_${sid}`); if(!eRV) return;
+    eRV.on('plotly_legendclick',ev=>{
+        const trace=ev.data[ev.curveNumber];
+        if(trace?.meta==null) return true; // not a dataset trace (e.g. orbit line) → default Plotly toggle
+        const dsId=trace.meta;
+        if(slot.hiddenDatasets.has(dsId)) slot.hiddenDatasets.delete(dsId); else slot.hiddenDatasets.add(dsId);
+        updatePlotSlot(sid);
+        return false; // we rebuild both RV and Residuals ourselves, in sync
+    });
+    slot._legendClickBound=true;
+}
+
 // ── Update plot slot ──────────────────────────────────────────────────────────
 function updatePlotSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
@@ -1011,6 +1026,7 @@ function updatePlotSlot(sid){
     }
     // attach zoom sync after each render
     _attachSlotZoomSync(sid);
+    _attachLegendClickHandler(sid);
     saveToSession();
 }
 
@@ -2146,6 +2162,7 @@ function buildTraces(p,foldPid,P,slot){
     dd.forEach(({ts,rvs,errs,dsIdx,lineNums,clipped})=>{
         const ds=datasets[dsIdx],gammaDsMs=p[gammaOffset()+dsIdx]||0,shift=gamRef-gammaDsMs;
         const col=getDsColor(ds,dsIdx),sym=getDsSymbol(ds),opacity=getDsOpacity(ds),sz=getDsSize(ds);
+        const dsVisible=slot.hiddenDatasets?.has(ds.id)?'legendonly':true;
         const xD=showDate&&!fold?ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?ts.map(t=>((t%P)+P)%P):ts.slice();
         const subtractOtherPlanets=(tsArr,vsArr)=>vsArr.map((v,i)=>{ let rv=v+shift; if(fold) planets.forEach((pl2,pi)=>{ if(pl2.active===false||pl2.pid===foldPid) return; rv-=fromMs(keplerianRV(tsArr[i],p[pi*5],p[pi*5+1],p[pi*5+2],p[pi*5+3],p[pi*5+4]),plotUnit); }); return fromMs(rv,plotUnit); });
         const rvsD=subtractOtherPlanets(ts,rvs),errsD=errs.map(e=>fromMs(e,plotUnit));
@@ -2154,8 +2171,8 @@ function buildTraces(p,foldPid,P,slot){
         const colors=colorByTime?ts.map(t=>timeColor(t,tMinG,tMaxG)):null;
         const mc=colorByTime?{color:colors,size:sz,symbol:sym,opacity}:{color:col,size:sz,symbol:sym,opacity};
         const mrc=colorByTime?{color:colors,size:Math.max(4,sz-2),symbol:'diamond',opacity}:{color:col,size:Math.max(4,sz-2),symbol:'diamond',opacity};
-        trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,ds.name,mc,KU));
-        trRes.push(makeScatterTrace(xD,res,errsD,lineNums,`Res: ${ds.name}`,mrc,KU,{showlegend:false}));
+        trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,ds.name,mc,KU,{visible:dsVisible,meta:ds.id}));
+        trRes.push(makeScatterTrace(xD,res,errsD,lineNums,`Res: ${ds.name}`,mrc,KU,{showlegend:false,visible:dsVisible}));
         if(showClipped&&clipped.ts.length>0){
             const xD_c=showDate&&!fold?clipped.ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?clipped.ts.map(t=>((t%P)+P)%P):clipped.ts.slice();
             const rvsD_c=subtractOtherPlanets(clipped.ts,clipped.rvs),errsD_c=clipped.errs.map(e=>fromMs(e,plotUnit));
@@ -2163,8 +2180,8 @@ function buildTraces(p,foldPid,P,slot){
             const res_c=rvsD_c.map((rv,i)=>rv-orb_c[i]);
             const mc_c={symbol:clippedStyle,color:col,size:sz,opacity:0.3,line:{width:1.5,color:col}};
             const htc=`%{customdata} clipped:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`;
-            trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,`${ds.name} (clipped)`,mc_c,KU),showlegend:false,hovertemplate:htc});
-            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2)},KU),showlegend:false,hovertemplate:htc});
+            trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,`${ds.name} (clipped)`,mc_c,KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
+            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2)},KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
         }
     });
     const xResL=showDate&&!fold?jdToIso(xMn+bjd0):xMn,xResR=showDate&&!fold?jdToIso(xMx+bjd0):xMx;
