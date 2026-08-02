@@ -47,7 +47,6 @@
         }
         .app-title { font-size:16px; font-weight:bold; color:var(--text2); white-space:nowrap; flex:0 0 auto; letter-spacing:.02em; margin-right:10px; }
 
-        /* projectName: styled as editable title, no label */
         #projectName {
             margin-left:8px;
             font-weight:bold; font-size:14px;
@@ -59,20 +58,16 @@
         #projectName:focus { outline:none; border-bottom-color:var(--accent2); }
 
         .project-btns { display:flex; gap:4px; flex:0 0 auto; align-items:center; }
-        /* Save group: margin-left for visual grouping */
         #btnSave { margin-left:8px; }
-        /* Sidebar: margin-left to separate from save group */
         #btnSidebar { margin-left:8px; }
 
         .project-spacer { flex:1; min-width:8px; }
         .theme-btn { background:none; border:1px solid var(--border); border-radius:20px; padding:3px 10px; font-size:13px; color:var(--text2); cursor:pointer; transition:background .2s; }
         .theme-btn:hover { background:var(--bg2); }
 
-        /* GitHub link in project bar */
         .github-link { color:var(--text2); flex:0 0 auto; opacity:.55; transition:opacity .2s,color .2s; display:flex; align-items:center; text-decoration:none; }
         .github-link:hover { opacity:1; color:var(--text); }
 
-        /* ── sidebar resize handle ── */
         #sidebarResizeHandle {
             display:none; position:fixed; top:var(--bar-h); bottom:0;
             left:calc(100vw - var(--sidebar-w) - 1px); width:4px;
@@ -82,7 +77,6 @@
         body.sidebar-mode #sidebarResizeHandle { display:block; }
         body.sidebar-mode #paramPanel { border-left:none; }
 
-        /* ── scroll containers ── */
         #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
         body.sidebar-mode { overflow:hidden; height:100vh; }
         body.sidebar-mode #leftScroll { position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w); overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
@@ -99,7 +93,7 @@
         .panel-header-summary span { cursor:pointer; margin-right:8px; }
         .panel-header-summary span:hover { text-decoration:underline; }
         .panel-header-summary span.inactive { opacity:.45; text-decoration:line-through; }
-        .panel-header-summary span.inactive:hover { text-decoration:underline; } /* underline wins over line-through on hover */
+        .panel-header-summary span.inactive:hover { text-decoration:underline; }
         .collapse-arrow { color:var(--accent); font-size:14px; flex:0 0 auto; transition:transform .2s; }
         .collapse-arrow.open  { transform:rotate(0deg); }
         .collapse-arrow.closed{ transform:rotate(-90deg); }
@@ -114,11 +108,12 @@
         .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom:1px solid var(--tab-active); }
         .ds-tab.drag-over { background:var(--accent2); opacity:.7; }
         .ds-tab.inactive { opacity:.5; }
-        .ds-tab .tab-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-        .ds-tab .tab-rename-input { flex:1; min-width:0; width:80px; font-weight:inherit; background:var(--input-bg); color:var(--text); border:1px solid var(--accent2); border-radius:3px; padding:0 4px; }
-        .ds-tab .tab-rename-input:focus { outline:none; }
-        .ds-tab .close-btn { font-size:13px; line-height:1; background:none; border:none; cursor:pointer; color:var(--text2); opacity:.55; padding:0; flex:0 0 auto; transition:opacity .15s; }
-        .ds-tab .close-btn:hover { opacity:1; color:#f72585; }
+        .ds-tab.dragging, .planet-tab.dragging { opacity:.4; }
+        .ds-tab .tab-label,.planet-tab .tab-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+        .ds-tab .tab-rename-input,.planet-tab .tab-rename-input { flex:1; min-width:0; width:80px; font-weight:inherit; background:var(--input-bg); color:var(--text); border:1px solid var(--accent2); border-radius:3px; padding:0 4px; }
+        .ds-tab .tab-rename-input:focus,.planet-tab .tab-rename-input:focus { outline:none; }
+        .ds-tab .close-btn,.planet-tab .close-btn { font-size:13px; line-height:1; background:none; border:none; cursor:pointer; color:var(--text2); opacity:.55; padding:0; flex:0 0 auto; transition:opacity .15s; }
+        .ds-tab .close-btn:hover,.planet-tab .close-btn:hover { opacity:1; color:#f72585; }
         .ds-tab-add { padding:5px 12px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:none; color:var(--accent); cursor:pointer; font-size:17px; font-weight:bold; margin-right:3px; line-height:1; transition:background .2s; }
         .ds-tab-add:hover { background:var(--tab-inactive); }
         .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
@@ -160,8 +155,6 @@
         .CodeMirror-linenumber { color:var(--cm-gutter-fg)!important; font-size:12px; }
         .CodeMirror-cursor { border-left-color:var(--cm-cursor)!important; }
         .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
-        /* ds-editor-wrap: common wrapper for CodeMirror AND preview so the colour bar
-           is visible in both view modes */
         .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s,opacity .2s; }
         .ds-editor-wrap.inactive { opacity:.5; }
         input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
@@ -175,10 +168,8 @@
         .param-panel { flex:0 0 540px; position:relative; }
         .param-list { display:flex; flex-direction:column; gap:6px; }
         .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
-        /* shared label styling: planet Tab view (.param-item label) and Table view (.pt-label) */
         .param-item label,
         .pt-label { color:var(--text2); text-align:right; }
-        /* shared number-input styling: planet Tab view (.param-item) and Table view (.pt-cell) */
         .param-item input[type=number],
         .pt-cell input[type=number] { padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .param-item input[type=number]:focus,
@@ -211,7 +202,6 @@
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-        /* planet tabs: inactive = var(--bg2), same as All/+ */
         .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
         .planet-tab:not(.active) { background:var(--bg2); }
         .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
@@ -228,17 +218,24 @@
         .planet-body { display:flex; flex-direction:column; gap:6px; }
         .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
         .planet-ctrl:hover { opacity:1; } .planet-ctrl.del:hover { color:#f72585; }
-        .gamma-row { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; border-left:3px solid transparent; padding-left:5px; transition:opacity .2s; }
-        .gamma-row label { color:var(--text2); text-align:right; }
-        .gamma-row input[type=number] { width:100%; padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
-        .gamma-row input[type=number]:focus { outline:none; border-color:var(--accent2); }
         .gamma-sigma { font-size:12px; color:var(--text2); font-family:monospace; }
+        /* ── instrument (γ/jitter) table ── */
+        .inst-table { width:100%; border-collapse:collapse; }
+        .inst-table th { text-align:right; padding:2px 6px 4px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:12px; }
+        .inst-table th:first-child,.inst-table td:first-child { text-align:left; }
+        .inst-table td { padding:3px 6px; text-align:right; vertical-align:middle; }
+        .inst-table td:first-child { border-left:3px solid var(--row-col,transparent); }
+        .inst-table td.inst-name { color:var(--text2); font-weight:bold; white-space:nowrap; }
+        .inst-table input[type=number] { width:90px; padding:4px 5px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
+        .inst-table input[type=number]:focus { outline:none; border-color:var(--accent2); }
+        .inst-table input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent2); cursor:pointer; }
+        .inst-table .gamma-sigma { display:block; margin-top:1px; }
+        .inst-table tr.inactive td { opacity:.4; }
 
         /* ── shared grid rows ── */
         .bjd0-row,.starmass-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row { grid-template-columns:160px 90px auto auto; }
         .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
-        /* gamma-ref-row: grid only, no standalone border (inside inset-box now) */
         .gamma-ref-row { display:grid; grid-template-columns:160px 90px auto auto; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row>.param-label,.starmass-row>label,.gamma-ref-row>.param-label { color:var(--text2); text-align:right; }
         .bjd0-row input[type=number],.starmass-row input[type=number],.gamma-ref-row input[type=number] { width:100%; padding:5px 6px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
@@ -256,14 +253,11 @@
         .btn-fit { background:#4cc9f0; color:#000; }
         .btn-fit-top { background:#4cc9f0; color:#000; padding:3px 10px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; transition:background .2s,filter .2s; flex:0 0 auto; min-width:64px; text-align:center; }
         .btn-fit-top:hover { filter:brightness(.88); }
-        /* separate keyframes per button — content must be fully re-declared each frame,
-           sharing one @keyframes across buttons would make them show the same text */
         @keyframes fitbtnFit { 0%{content:'⏳ Fitting…';} 50%,100%{content:'⌛ Fitting…';} }
         @keyframes fitbtnGLS { 0%{content:'⏳ Computing…';} 50%,100%{content:'⌛ Computing…';} }
         .btn-fit:disabled,.btn-fit-top:disabled { opacity:1; filter:none; cursor:wait; }
         .btn-fit:disabled span,.btn-fit-top:disabled span { display:none; }
         .btn-fit:disabled::before,.btn-fit-top:disabled::before { content:'⏳ Fitting…'; animation:fitbtnFit 1s step-start infinite; }
-        .btn-fit-top:disabled::before { animation:fitbtnFit 1s step-start infinite; }
         .btn-undo { background:#888; color:#fff; padding:8px 12px; }
         .btn-undo:disabled { opacity:.35; cursor:not-allowed; filter:none; }
         .btn-new    { background:#e9c46a; color:#000; } .btn-sample { background:#7209b7; color:#fff; }
@@ -272,13 +266,9 @@
         .btn-saveas { background:#4a3570; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-open   { background:#2d6a4f; color:#fff; padding:6px 12px; font-size:12px; }
         .btn-gls-run{ background:#e63946; color:#fff; padding:6px 14px; font-size:12px; }
-        /* .busy instead of :disabled — disabled buttons ignore `cursor` in most browsers,
-           so cursor:wait never actually rendered. Kept clickable, guarded by JS reentrancy check. */
         .btn-gls-run.busy { opacity:1; filter:none; cursor:wait; }
         .btn-gls-run.busy span { display:none; }
         .btn-gls-run.busy::before { content:'⏳ Computing…'; animation:fitbtnGLS 1s step-start infinite; }
-        /* larger, easier-to-notice hit area: whole GLS panel shows wait cursor while busy.
-           Requires :has() support (Chrome 105+, Firefox 121+, Safari 15.4+). */
         .panel-slot:has(.btn-gls-run.busy) { cursor:wait; }
         .btn-view   { background:none; border:1px solid var(--border); border-radius:5px; padding:4px 8px; font-size:12px; color:var(--text2); cursor:pointer; }
         .btn-view:hover { background:var(--bg3); } .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
@@ -299,7 +289,6 @@
         .pt-label { padding:2px 4px 2px 0; white-space:nowrap; border-right:1px solid var(--border); align-self:center; }
         .pt-label.sep { border-top:1px solid var(--border); padding-top:5px; margin-top:3px; }
         .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
-        /* fit checkbox RIGHT of input */
         .pt-cell-top { display:flex; align-items:center; gap:3px; }
         .pt-cell-top input[type=checkbox] { flex:0 0 auto; }
         .pt-cell input[type=number] { flex:1; min-width:0; }
@@ -347,27 +336,22 @@
 
 <div id="sidebarResizeHandle"></div>
 
-<!-- ── fixed project bar ── -->
 <div class="project-bar" id="projectBar">
     <span class="app-title">💫 RV Fitter</span>
     <button class="btn-new"  id="btnNew"  style="padding:3px 8px;font-size:12px;">🆕</button>
     <button class="btn-open" id="btnOpen" style="padding:3px 8px;font-size:12px;">📂</button>
     <input type="file" id="projectFileInput" accept=".rvproj,.json" style="display:none;">
 
-    <!-- projectName: no label, styled as editable title -->
     <input type="text" id="projectName" value="untitled" placeholder="project name">
 
-    <!-- Save group -->
     <div class="project-btns">
         <button class="btn-save"   id="btnSave"  >💾 Save</button>
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
     </div>
 
-    <!-- View/Theme group: margin-left separates from save group -->
     <button class="btn-view"  id="btnSidebar">⊳ Sidebar</button>
     <button class="theme-btn" id="btnTheme"  >🌓</button>
 
-    <!-- GitHub link -->
     <a class="github-link"
        href="https://github.com/mzechmeister/Radial-velocity-orbit-fitter"
        target="_blank" rel="noopener"
@@ -411,7 +395,6 @@
 </div>
 </div>
 
-<!-- ── param panel ── -->
 <div class="panel param-panel" id="paramPanel">
     <button class="sidebar-close" id="btnSidebarClose">⊲ Close</button>
     <div class="panel-header" id="paramHeader">
@@ -439,7 +422,6 @@
                 </select>
             </div>
 
-            <!-- ── PLANETS section ── -->
             <div class="stats-group inset-box">
                 <div class="stats-group-title">Planets</div>
                 <div class="planet-view-bar">
@@ -458,10 +440,9 @@
                 </div>
             </div>
 
-            <!-- ── OFFSETS & NOISE section ── -->
             <div class="stats-group inset-box">
                 <div class="stats-group-title">Offsets &amp; Noise</div>
-                <div id="gammaRows"></div>
+                <div style="overflow-x:auto;"><table class="inst-table" id="instTable"></table></div>
                 <div class="gamma-ref-row">
                     <span class="param-label" title="Reference γ for orbit curve (not fitted)."><em>γ</em>&nbsp;– reference</span>
                     <input type="number" id="gammaRefVal" value="0" step="1">
@@ -472,7 +453,6 @@
 
             <div class="section-sep"></div>
 
-            <!-- ── FIT QUALITY section ── -->
             <div class="stats-group inset-box">
                 <div class="stats-group-title">Fit quality</div>
                 <div id="fitStatsTable"></div>
@@ -514,7 +494,6 @@ const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down',
 const PLANET_COLORS =['#f72585','#a0ff78','#ffbe0b','#80ffdb','#b5838d','#ff9f1c'];
 const PLANET_LETTERS='bcdefghijklmnopqrstuvwxyz';
 
-// ── Planet table row definitions ──────────────────────────────────────────────
 const PT_DEFS=[
     {key:'P',    step:0.1,  min:null,max:null},
     {key:'K',    step:1,    min:null,max:null},
@@ -535,7 +514,6 @@ let dragDsPid=null,dragPlanetPid=null;
 const glsLineStates={},glsDragStates={};
 let _planetView='table';
 let panels=[],nextPanelId=1,_dragPanelSid=null;
-// zoom sync state per slot
 const _slotSyncState={};
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
@@ -905,9 +883,6 @@ function loadExtGLS(){
     if(loadExtGLS._loading) return; loadExtGLS._loading=true;
     showMsg('Loading mzechmeister/gls.js…',true);
     const s=document.createElement('script');
-    // rawcdn.githack.com = production/cached mirror (via jsDelivr), safe for repeated
-    // automatic loads. raw.githack.com is dev-only, rate-limited, and can silently
-    // fail on frequent page reloads, leaving the app stuck on the builtin fallback.
     s.src='https://rawcdn.githack.com/mzechmeister/GLS/master/javascript/gls.js';
     s.onload=()=>{ showMsg('✅ mzechmeister/gls.js loaded.',true); panels.filter(p=>p.type==='gls'&&p.useExt).forEach(p=>updateGLSSlot(p.sid)); };
     s.onerror=()=>{ loadExtGLS._loading=false; showMsg('❌ Failed to load gls.js — falling back to built-in GLS.',false); };
@@ -915,7 +890,6 @@ function loadExtGLS(){
 }
 
 function removePanel(sid){
-    // cleanup zoom sync listeners
     const state=_slotSyncState[sid];
     if(state){
         const eRV=el(`plotRV_${sid}`),eRs=el(`plotRes_${sid}`);
@@ -960,6 +934,21 @@ function _attachSlotZoomSync(sid){
     eRs.on('plotly_relayout',state.rsL);
 }
 
+// ── Sync legend-click visibility between RV and Residuals plots ──────────────
+function _attachLegendClickHandler(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._legendClickBound) return;
+    const eRV=el(`plotRV_${sid}`); if(!eRV) return;
+    eRV.on('plotly_legendclick',ev=>{
+        const trace=ev.data[ev.curveNumber];
+        if(trace?.meta==null) return true; // not a dataset trace (e.g. orbit line) → default Plotly toggle
+        const dsId=trace.meta;
+        if(slot.hiddenDatasets.has(dsId)) slot.hiddenDatasets.delete(dsId); else slot.hiddenDatasets.add(dsId);
+        updatePlotSlot(sid);
+        return false; // we rebuild both RV and Residuals ourselves, in sync
+    });
+    slot._legendClickBound=true;
+}
+
 // ── Panel title updates ────────────────────────────────────────────────────────
 function updatePlotSlotTitle(slot){
     const h2=el(`slotTitle_${slot.sid}`); if(!h2) return;
@@ -978,21 +967,6 @@ function updateGLSSlotTitle(slot){
     const subtracted=planets.filter(pl=>pl.active!==false&&slot.glsSubtract?.[pl.pid]!==false);
     const rvLbl=['RV',...subtracted.map(pl=>pl.name)].join(' − ');
     h2.textContent=`🔭 GLS (P=${peakStr}, ${rvLbl})`;
-}
-
-// ── Sync legend-click visibility between RV and Residuals plots ──────────────
-function _attachLegendClickHandler(sid){
-    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._legendClickBound) return;
-    const eRV=el(`plotRV_${sid}`); if(!eRV) return;
-    eRV.on('plotly_legendclick',ev=>{
-        const trace=ev.data[ev.curveNumber];
-        if(trace?.meta==null) return true; // not a dataset trace (e.g. orbit line) → default Plotly toggle
-        const dsId=trace.meta;
-        if(slot.hiddenDatasets.has(dsId)) slot.hiddenDatasets.delete(dsId); else slot.hiddenDatasets.add(dsId);
-        updatePlotSlot(sid);
-        return false; // we rebuild both RV and Residuals ourselves, in sync
-    });
-    slot._legendClickBound=true;
 }
 
 // ── Update plot slot ──────────────────────────────────────────────────────────
@@ -1024,7 +998,6 @@ function updatePlotSlot(sid){
             yaxis:{...axBase,tickformat:'~r',title:`Residuals [${getKUnit()}]`,zeroline:true,zerolinewidth:1},
             showlegend:false},{responsive:true,displayModeBar:'hover'});
     }
-    // attach zoom sync after each render
     _attachSlotZoomSync(sid);
     _attachLegendClickHandler(sid);
     saveToSession();
@@ -1097,10 +1070,10 @@ function renderGLSSlot(sid){
 
 function updateGLSSlot(sid){
     const btn=el(`glsComputeBtn_${sid}`);
-    if(btn?.classList.contains('busy')) return; // already computing, ignore reentrant clicks
+    if(btn?.classList.contains('busy')) return;
     if(btn) btn.classList.add('busy');
-    const MIN_BUSY_MS=350; // guarantee the wait cursor/label stays visible long enough
-    const start=performance.now();               // to actually notice, even for near-instant data
+    const MIN_BUSY_MS=350;
+    const start=performance.now();
     setTimeout(()=>{
         try{ computeGLSData(sid); renderGLSSlot(sid); }
         finally{
@@ -1130,12 +1103,22 @@ function updateAllPanels(){
     panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else updateGLSSlot(p.sid); });
 }
 
+// ── Light panel refresh: rebuild plot/GLS visuals from current state without
+// re-running the (potentially expensive) GLS periodogram — used for label-only
+// changes like renaming, where the underlying data/fit is unaffected.
+function updateAllPanelsLight(){
+    datasets.forEach(ds=>updateStatsBar(ds.id));
+    el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
+    panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else renderGLSSlot(p.sid); });
+}
+
 // ── New project ───────────────────────────────────────────────────────────────
 function newProject(){
     if(!confirm('Start a new project? Unsaved changes will be lost.')) return;
     datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
     datasets=[]; nextId=1; activeId=null;
-    ['dsTabs','dsPanes','gammaRows','planetBlocks','planetTabBar','planetTable','panelSlotsContainer'].forEach(id=>{ const e=el(id); if(e) e.innerHTML=''; });
+    ['dsTabs','dsPanes','planetBlocks','planetTabBar','planetTable','panelSlotsContainer'].forEach(id=>{ const e=el(id); if(e) e.innerHTML=''; });
+    const instTbl=el('instTable'); if(instTbl) instTbl.innerHTML='';
     planets=[]; nextPlanetId=1; activePlanetPid=null;
     Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
     Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
@@ -1178,8 +1161,8 @@ function buildPlanetTable(){
     tbl.appendChild(makeEl('div',{class:'pt-corner'}));
     planets.forEach((pl,i)=>{
         const col=planetColor(i);
-        const nameInp=makeEl('input',{class:'planet-name-input',id:`pName_${pl.pid}`,value:pl.name,style:{color:col}});
-        nameInp.addEventListener('change',()=>onPlanetRename(pl.pid));
+        const nameInp=makeEl('input',{class:'planet-name-input',id:`ptName_${pl.pid}`,value:pl.name,style:{color:col}});
+        nameInp.addEventListener('change',()=>onPlanetRename(pl.pid,nameInp.value));
         const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pl.pid}`,style:{accentColor:col,width:'13px',height:'13px',cursor:'pointer',flexShrink:'0'}});
         activeCb.checked=pl.active!==false; activeCb.addEventListener('change',()=>onPlanetActiveToggle(pl.pid));
         const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove',text:'×',style:{fontSize:'11px',padding:'0 2px'}});
@@ -1219,6 +1202,7 @@ function buildPlanetTable(){
     tbl.appendChild(makeEl('div',{class:'pt-label',html:'<em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]'}));
     planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptSma_${pl.pid}`,text:'—'})));
     planets.forEach(pl=>syncPlanetToDOM(pl));
+    if(_lastSigmasFull) updateTableErrors(_lastSigmasFull);
 }
 
 function updateTableErrors(sigmas){
@@ -1235,6 +1219,50 @@ function updateTableDerived(){
     });
 }
 
+// ── Shared tab building blocks (dataset tabs & planet tabs) ──────────────────
+// One implementation for label+rename and the close button, so both tab bars
+// behave identically instead of diverging (this is what caused the earlier
+// "planet tab not renameable" inconsistency).
+function attachTabLabel(tab,label,{onRename}={}){
+    const lbl=makeEl('span',{class:'tab-label',text:label});
+    tab.appendChild(lbl);
+    if(onRename) tab.addEventListener('dblclick',e=>{
+        e.stopPropagation();
+        const current=tab.querySelector('.tab-label'); // always the live element, not a stale closure ref
+        if(current) startTabRename(tab,current,onRename);
+    });
+    return lbl;
+}
+function startTabRename(tab,labelSpan,onRename){
+    const current=labelSpan.textContent;
+    const inp=makeEl('input',{type:'text',class:'tab-rename-input',value:current,style:{width:Math.max(60,current.length*9)+'px'}});
+    labelSpan.replaceWith(inp); inp.focus(); inp.select();
+    let done=false;
+    function commit(){
+        if(done) return; done=true;
+        const newName=inp.value.trim()||current;
+        inp.replaceWith(makeEl('span',{class:'tab-label',text:newName}));
+        onRename(newName);
+    }
+    inp.addEventListener('blur',commit);
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } if(e.key==='Escape'){ inp.value=current; inp.blur(); } e.stopPropagation(); });
+    inp.addEventListener('click',e=>e.stopPropagation());
+}
+function attachTabCloseButton(tab,onClose){
+    const closeBtn=makeEl('button',{class:'close-btn',title:'Remove',text:'×'});
+    closeBtn.addEventListener('click',e=>{ e.stopPropagation(); onClose(); });
+    tab.appendChild(closeBtn);
+    return closeBtn;
+}
+function setupGenericDrag(tab,id,tabClass,overClass,getDragId,setDragId,onSwap){
+    tab.draggable=true;
+    tab.addEventListener('dragstart',e=>{ setDragId(id); tab.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; e.stopPropagation(); });
+    tab.addEventListener('dragend',()=>{ setDragId(null); tab.classList.remove('dragging'); document.querySelectorAll(`.${tabClass}.${overClass}`).forEach(t=>t.classList.remove(overClass)); });
+    tab.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); if(getDragId()!=null&&getDragId()!==id) tab.classList.add(overClass); });
+    tab.addEventListener('dragleave',()=>tab.classList.remove(overClass));
+    tab.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); tab.classList.remove(overClass); if(getDragId()!=null&&getDragId()!==id) onSwap(getDragId(),id); });
+}
+
 // ── Planet tabs with drag-to-reorder ─────────────────────────────────────────
 function rebuildPlanetTabs(){
     const bar=el('planetTabBar'); bar.innerHTML='';
@@ -1246,15 +1274,12 @@ function rebuildPlanetTabs(){
     planets.forEach(pl=>{
         const col=planetColor(planetIndex(pl.pid));
         const isActive=pl.pid===activePlanetPid;
-        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,draggable:true,style:{borderTopColor:col,color:isActive?col:'var(--text2)'}});
+        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,style:{borderTopColor:col,color:isActive?col:'var(--text2)'}});
         tab.appendChild(makeEl('span',{text:'●',style:{color:col,fontSize:'10px',opacity:pl.active===false?'.35':'1'}}));
-        tab.appendChild(makeEl('span',{text:pl.name}));
+        attachTabLabel(tab,pl.name,{onRename:n=>onPlanetRename(pl.pid,n)});
+        attachTabCloseButton(tab,()=>removePlanet(pl.pid));
         tab.addEventListener('click',()=>switchPlanetTab(pl.pid));
-        tab.addEventListener('dragstart',e=>{ dragPlanetPid=pl.pid; tab.style.opacity='.4'; e.dataTransfer.effectAllowed='move'; e.stopPropagation(); });
-        tab.addEventListener('dragend',()=>{ dragPlanetPid=null; tab.style.opacity=''; document.querySelectorAll('.planet-tab.tab-drag-over').forEach(t=>t.classList.remove('tab-drag-over')); });
-        tab.addEventListener('dragover',e=>{ e.preventDefault(); e.stopPropagation(); if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) tab.classList.add('tab-drag-over'); });
-        tab.addEventListener('dragleave',()=>tab.classList.remove('tab-drag-over'));
-        tab.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); tab.classList.remove('tab-drag-over'); if(dragPlanetPid!==null&&dragPlanetPid!==pl.pid) _swapPlanets(dragPlanetPid,pl.pid); });
+        setupGenericDrag(tab,pl.pid,'planet-tab','tab-drag-over',()=>dragPlanetPid,v=>{dragPlanetPid=v;},_swapPlanets);
         bar.appendChild(tab);
     });
     const addBtn=makeEl('button',{class:'planet-tab-add',title:'Add planet',text:'+'});
@@ -1333,7 +1358,7 @@ function _buildPlanetBlock(pl,col,KU){
     const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pid}`,title:'Enable/disable',style:{accentColor:col,width:'14px',height:'14px',cursor:'pointer',flex:'0 0 auto'}});
     activeCb.checked=pl.active!==false; activeCb.addEventListener('change',()=>onPlanetActiveToggle(pid));
     const nameInp=makeEl('input',{class:'planet-name-input',id:`pName_${pid}`,value:pl.name,style:{color:col}});
-    nameInp.addEventListener('change',()=>onPlanetRename(pid));
+    nameInp.addEventListener('change',()=>onPlanetRename(pid,nameInp.value));
     nameInp.addEventListener('keydown',e=>{ if(e.key==='Enter') nameInp.blur(); });
     const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove planet',text:'×'});
     delBtn.addEventListener('click',e=>{ e.stopPropagation(); removePlanet(pid); });
@@ -1369,12 +1394,19 @@ function addPlanet(opts={}){
     if(_planetView==='table') buildPlanetTable();
     rebuildGLSSubtractRows(); rebuildFoldSelects();
 }
-function onPlanetRename(pid){
+function onPlanetRename(pid,newName){
     const pl=planets.find(p=>p.pid===pid); if(!pl) return;
-    pl.name=el(`pName_${pid}`)?.value||defaultPlanetName(planetIndex(pid));
-    const tab=el(`ptab_${pid}`); if(tab){ const lbl=tab.querySelectorAll('span')[1]; if(lbl) lbl.textContent=pl.name; }
-    if(_planetView==='table') buildPlanetTable();
-    updateAllPanels(); rebuildGLSSubtractRows(); rebuildFoldSelects(); refreshGLSOverlays();
+    pl.name=(newName??'').trim()||defaultPlanetName(planetIndex(pid));
+    // each view has its own uniquely-id'd name input; sync whichever did NOT trigger this
+    const blockInp=el(`pName_${pid}`),tableInp=el(`ptName_${pid}`);
+    if(blockInp&&blockInp.value!==pl.name) blockInp.value=pl.name;
+    if(tableInp&&tableInp.value!==pl.name) tableInp.value=pl.name;
+    rebuildPlanetTabs(); // cheap DOM-only rebuild: updates the tab's own label/order
+    rebuildGLSSubtractRows(); rebuildFoldSelects();
+    // rename only changes a label, not the fitted data — refresh legends/titles
+    // and the GLS overlay, but skip re-computing the periodogram itself
+    updateAllPanelsLight();
+    refreshGLSOverlays();
 }
 function removePlanet(pid){
     planets=planets.filter(p=>p.pid!==pid);
@@ -1387,17 +1419,17 @@ function removePlanet(pid){
 }
 
 function setFitBtnsDisabled(dis){ ['btnFit','btnFitTop'].forEach(id=>{ const b=el(id); if(b) b.disabled=dis; }); }
+
 // ── Dataset drag & drop ───────────────────────────────────────────────────────
 function setupDatasetDrag(tab,id){
-    tab.draggable=true;
-    tab.addEventListener('dragstart',e=>{ dragDsPid=id; tab.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
-    tab.addEventListener('dragend',()=>{ tab.classList.remove('dragging'); clearDsDragOver(); dragDsPid=null; });
-    tab.addEventListener('dragover',e=>{ e.preventDefault(); if(dragDsPid!==null&&dragDsPid!==id){ clearDsDragOver(); tab.classList.add('drag-over'); } });
-    tab.addEventListener('dragleave',()=>tab.classList.remove('drag-over'));
-    tab.addEventListener('drop',e=>{ e.preventDefault(); tab.classList.remove('drag-over'); if(dragDsPid!==null&&dragDsPid!==id) _swapDatasets(dragDsPid,id); });
+    setupGenericDrag(tab,id,'ds-tab','drag-over',()=>dragDsPid,v=>{dragDsPid=v;},_swapDatasets);
 }
-function clearDsDragOver(){ document.querySelectorAll('.ds-tab.drag-over').forEach(e=>e.classList.remove('drag-over')); }
-function _swapDatasets(idA,idB){ const iA=datasets.findIndex(d=>d.id===idA),iB=datasets.findIndex(d=>d.id===idB); if(iA<0||iB<0) return; [datasets[iA],datasets[iB]]=[datasets[iB],datasets[iA]]; renderTabs(); rebuildGammaUI(); updateAllPanels(); }
+function _swapDatasets(idA,idB){
+    const iA=datasets.findIndex(d=>d.id===idA),iB=datasets.findIndex(d=>d.id===idB); if(iA<0||iB<0) return;
+    [datasets[iA],datasets[iB]]=[datasets[iB],datasets[iA]];
+    clearErrors(); // dataset order/indices shift; stale σ would otherwise be mis-attributed
+    renderTabs(); rebuildGammaUI(); updateAllPanels();
+}
 
 // ── Dataset helpers ───────────────────────────────────────────────────────────
 function getDsColor(ds,idx){ return el(`dsColor_${ds.id}`)?.value||PALETTE[idx%PALETTE.length]; }
@@ -1427,12 +1459,12 @@ function buildDsPreview(id){
         parsed.push({lineIdx,line,isComment:false,dataIdx:dataIdx++,tRaw:parts[0]||'',tAdj,rv:parts[1]||'',err:parts[2]||'',iso:isFinite(tRaw)?jdToIso(tRaw+t0ref):'—'});
     });
     const hasErr=parsed.some(r=>!r.isComment&&(()=>{ const e=parseFloat(r.err); return !isNaN(e)&&e>0; })());
-    const nCols=hasErr?5:4; // cb,date,time,rv,(err) — excl. line-number column
+    const nCols=hasErr?5:4;
 
     const table=makeEl('table',{class:'ds-preview-table'});
     const headRow=makeEl('tr');
-    headRow.appendChild(makeEl('th')); // line number
-    headRow.appendChild(makeEl('th')); // checkbox
+    headRow.appendChild(makeEl('th'));
+    headRow.appendChild(makeEl('th'));
     headRow.appendChild(makeEl('th',{text:'date (UTC)'}));
     headRow.appendChild(makeEl('th',{html:bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]'}));
     headRow.appendChild(makeEl('th',{text:`RV [${KU}]`}));
@@ -1557,6 +1589,7 @@ function onDsUnitChange(id){ rebuildGammaUI(); updateStatsBar(id); updateAllPane
 function removeDataset(id){
     if(datasets.length<=1){ showMsg('Cannot remove the last dataset.',false); return; }
     const idx=dsIndex(id); el(`pane_${id}`).remove(); datasets.splice(idx,1);
+    clearErrors(); // dataset indices shift; stale σ would otherwise be mis-attributed
     renderTabs(); switchTab(datasets[Math.min(idx,datasets.length-1)].id); rebuildGammaUI(); updateAllPanels();
 }
 
@@ -1574,7 +1607,7 @@ function updateDataHeaderSummary(){
                 style:{color:col}});
             span.addEventListener('click',e=>{ e.stopPropagation(); openDatasetTab(ds.id); });
             summary.appendChild(span);
-        });q
+        });
         summary.classList.add('visible');
     } else summary.classList.remove('visible');
 }
@@ -1592,26 +1625,19 @@ function renderTabs(){
         const col=getDsColor(ds,i);
         const isActive=getChecked(`dsActive_${ds.id}`,true);
         const tab=makeEl('div',{class:'ds-tab'+(ds.id===activeId?' active':'')+(isActive?'':' inactive'),id:`tab_${ds.id}`,title:'Double-click to rename',style:{borderTop:`3px solid ${col}`}});
-        const lbl=makeEl('span',{class:'tab-label',text:ds.name});
-        const closeBtn=makeEl('button',{class:'close-btn',title:'Remove',text:'×',style:{display:datasets.length>1?'':'none'}});
-        closeBtn.addEventListener('click',e=>{ e.stopPropagation(); removeDataset(ds.id); });
-        tab.appendChild(lbl); tab.appendChild(closeBtn);
+        attachTabLabel(tab,ds.name,{onRename:n=>{
+            ds.name=n;
+            updateDataHeaderSummary();
+            rebuildGammaUI();
+            updateAllPanelsLight();
+        }});
+        if(datasets.length>1) attachTabCloseButton(tab,()=>removeDataset(ds.id));
         tab.addEventListener('click',()=>switchTab(ds.id));
-        tab.addEventListener('dblclick',e=>{ e.stopPropagation(); startRename(ds.id,lbl); });
         setupDatasetDrag(tab,ds.id); bar.appendChild(tab);
     });
     const addBtn=makeEl('button',{class:'ds-tab-add',title:'Add dataset',text:'+'});
     addBtn.addEventListener('click',()=>addDataset()); bar.appendChild(addBtn);
     updateDataHeaderSummary();
-}
-function startRename(id,labelSpan){
-    const ds=dsById(id);
-    const inp=makeEl('input',{type:'text',class:'tab-rename-input',value:ds.name,style:{width:Math.max(60,ds.name.length*9)+'px'}});
-    labelSpan.replaceWith(inp); inp.focus(); inp.select();
-    function commit(){ const n=inp.value.trim()||ds.name; ds.name=n; renderTabs(); rebuildGammaUI(); updateAllPanels(); }
-    inp.addEventListener('blur',commit);
-    inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); inp.blur(); } if(e.key==='Escape'){ inp.value=ds.name; inp.blur(); } e.stopPropagation(); });
-    inp.addEventListener('click',e=>e.stopPropagation());
 }
 function switchTab(id){
     activeId=id;
@@ -1651,7 +1677,7 @@ function onGammaRefSrcChange(){
     const src=el('gammaRefSrc').value,isCustom=src==='custom';
     el('gammaRefVal').disabled=!isCustom;
     if(!isCustom){ const idx=datasets.findIndex(d=>d.id===parseInt(src)); if(idx>=0) setNumVal('gammaRefVal',fromMs(getFullParamVector()[gammaOffset()+idx]||0,getKUnit()),4); }
-    updateAllPanels();
+    updateAllPanelsLight(); // γ-reference only shifts the plotted curve offset, never affects the fit/GLS periodogram
 }
 function rebuildGammaRefSelector(){
     const sel=el('gammaRefSrc'),prev=sel.value;
@@ -1661,47 +1687,59 @@ function rebuildGammaRefSelector(){
     sel.value=valid.includes(prev)?prev:'custom'; onGammaRefSrcChange();
 }
 
-// ── γ + jitter UI ─────────────────────────────────────────────────────────────
+// ── γ + jitter instrument table ────────────────────────────────────────────────
 function rebuildGammaUI(){
-    const container=el('gammaRows');
-    container.innerHTML='';
-    container.style.cssText='display:flex;flex-direction:column;gap:4px;';
+    const tbl=el('instTable'); if(!tbl) return;
+    tbl.innerHTML='';
     const KU=getKUnit();
-    datasets.forEach((ds,i)=>container.appendChild(makeGammaRowGamma(ds,i,KU)));
-    datasets.forEach((ds,i)=>container.appendChild(makeGammaRowJitter(ds,i,KU)));
+    const headRow=makeEl('tr');
+    headRow.appendChild(makeEl('th',{text:'Instrument'}));
+    headRow.appendChild(makeEl('th',{html:`<em>γ</em> [${KU}]`}));
+    headRow.appendChild(makeEl('th',{text:'fit'}));
+    headRow.appendChild(makeEl('th',{html:`<em>s</em> [${KU}]`}));
+    headRow.appendChild(makeEl('th',{text:'fit'}));
+    tbl.appendChild(makeEl('thead',{},[headRow]));
+    const tbody=makeEl('tbody');
+    datasets.forEach((ds,i)=>tbody.appendChild(makeInstRow(ds,i,KU)));
+    tbl.appendChild(tbody);
     rebuildGammaRefSelector();
+    if(_lastSigmasFull) displayErrors(_lastSigmasFull); // preserve σ display across any rebuild
 }
-function makeGammaRowGamma(ds,idx,KU){
-    const col=getDsColor(ds,idx),prevEl=el(`pGamma_${ds.id}`),prevFitEl=el(`fitGamma_${ds.id}`);
-    const gMs=prevEl?toMs(parseFloat(prevEl.value)||0,KU):(ds.gamma||0);
-    const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitGamma_${ds.id}`});
-    fitCb.checked=prevFitEl?prevFitEl.checked:true;
-    fitCb.addEventListener('change',()=>{
-    });
-    const lbl=makeEl('label',{for:`pGamma_${ds.id}`,html:`<em>γ</em>&nbsp;${ds.name}`});
-    const inp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
-    inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-    const sig=makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`});
-    const isActive=getChecked(`dsActive_${ds.id}`,true);
-    if(!isActive){ fitCb.disabled=true; inp.disabled=true; }
-    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:isActive?'1':'.4'}});
-    [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
-}
-function makeGammaRowJitter(ds,idx,KU){
-    const col=getDsColor(ds,idx),prevJit=el(`pJitter_${ds.id}`),prevFitEl=el(`fitJitter_${ds.id}`);
+function makeInstRow(ds,idx,KU){
+    const col=getDsColor(ds,idx),isActive=getChecked(`dsActive_${ds.id}`,true);
+    const prevGamma=el(`pGamma_${ds.id}`),prevFitGamma=el(`fitGamma_${ds.id}`);
+    const gMs=prevGamma?toMs(parseFloat(prevGamma.value)||0,KU):(ds.gamma||0);
+    const prevJit=el(`pJitter_${ds.id}`),prevFitJit=el(`fitJitter_${ds.id}`);
     const jitMs=prevJit?toMs(parseFloat(prevJit.value)||0,KU):0;
-    const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:`fitJitter_${ds.id}`});
-    fitCb.checked=prevFitEl?prevFitEl.checked:false;
-    fitCb.addEventListener('change',()=>{
-    });
-    const lbl=makeEl('label',{for:`pJitter_${ds.id}`,html:`<em>s</em> &nbsp;${ds.name}`});
-    const inp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
-    inp.addEventListener('change',updateAllPanels); inp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-    const sig=makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`});
-    const isActive=getChecked(`dsActive_${ds.id}`,true);
-    if(!isActive){ fitCb.disabled=true; inp.disabled=true; }
-    const row=makeEl('div',{class:'gamma-row',style:{borderLeftColor:col,opacity:isActive?'.85':'.4'}});
-    [fitCb,lbl,inp,sig].forEach(c=>row.appendChild(c)); return row;
+
+    const tr=makeEl('tr',{class:isActive?'':'inactive',style:{'--row-col':col}});
+    tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name,style:{color:col}}));
+
+    const gTd=makeEl('td');
+    const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
+    gInp.disabled=!isActive;
+    gInp.addEventListener('change',updateAllPanels); gInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+    gTd.appendChild(gInp); gTd.appendChild(makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`}));
+    tr.appendChild(gTd);
+
+    const gFitTd=makeEl('td');
+    const gFitCb=makeEl('input',{type:'checkbox',id:`fitGamma_${ds.id}`,title:'Include γ in fit'});
+    gFitCb.checked=prevFitGamma?prevFitGamma.checked:true; gFitCb.disabled=!isActive;
+    gFitTd.appendChild(gFitCb); tr.appendChild(gFitTd);
+
+    const jTd=makeEl('td');
+    const jInp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
+    jInp.disabled=!isActive;
+    jInp.addEventListener('change',updateAllPanels); jInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
+    jTd.appendChild(jInp); jTd.appendChild(makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`}));
+    tr.appendChild(jTd);
+
+    const jFitTd=makeEl('td');
+    const jFitCb=makeEl('input',{type:'checkbox',id:`fitJitter_${ds.id}`,title:'Include jitter in fit'});
+    jFitCb.checked=prevFitJit?prevFitJit.checked:false; jFitCb.disabled=!isActive;
+    jFitTd.appendChild(jFitCb); tr.appendChild(jFitTd);
+
+    return tr;
 }
 
 // ── Stats bar ─────────────────────────────────────────────────────────────────
@@ -1782,7 +1820,6 @@ function nPlanetParams(){ return planets.length*5; }
 function gammaOffset(){ return nPlanetParams(); }
 function jitterOffset(){ return nPlanetParams()+datasets.length; }
 
-// ── Jitter parametrisation: s = jit²  ─────────────────────────────────────────
 function getJitterSq(p,dsIdx){ return Math.max(0,p[jitterOffset()+dsIdx]||0); }
 
 function negLogLike(p,dd){
@@ -2301,7 +2338,8 @@ function loadProjectFromObj(proj){
     Object.keys(_slotSyncState).forEach(k=>delete _slotSyncState[k]);
     datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
     datasets=[]; nextId=1; activeId=null;
-    ['dsTabs','dsPanes','gammaRows'].forEach(id=>el(id).innerHTML='');
+    el('dsTabs').innerHTML=''; el('dsPanes').innerHTML='';
+    const instTbl=el('instTable'); if(instTbl) instTbl.innerHTML='';
     undoSnapshot=null; _lastSigmasFull=null; el('undoBtn').disabled=true;
     const o=proj.options||{};
     if(o.fitAlgo) el('fitAlgo').value=o.fitAlgo;
