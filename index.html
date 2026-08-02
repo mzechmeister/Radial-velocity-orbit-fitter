@@ -291,7 +291,7 @@
         .pt-cell { padding:1px 2px; display:flex; flex-direction:column; gap:1px; }
         .pt-cell-top { display:flex; align-items:center; gap:3px; }
         .pt-cell-top input[type=checkbox] { flex:0 0 auto; }
-        .pt-cell input[type=number] { flex:1; min-width:0; }
+        .pt-cell-top input[type=number] { flex:1; min-width:0; }
         .pt-cell .param-sigma { text-align:right; min-height:13px; }
         .pt-derived,
         .planet-derived span.d-val { font-size:12px; color:var(--val); font-family:monospace; }
@@ -1695,15 +1695,13 @@ function rebuildGammaUI(){
     const headRow=makeEl('tr');
     headRow.appendChild(makeEl('th',{text:'Instrument'}));
     headRow.appendChild(makeEl('th',{html:`<em>γ</em> [${KU}]`}));
-    headRow.appendChild(makeEl('th',{text:'fit'}));
     headRow.appendChild(makeEl('th',{html:`<em>s</em> [${KU}]`}));
-    headRow.appendChild(makeEl('th',{text:'fit'}));
     tbl.appendChild(makeEl('thead',{},[headRow]));
     const tbody=makeEl('tbody');
     datasets.forEach((ds,i)=>tbody.appendChild(makeInstRow(ds,i,KU)));
     tbl.appendChild(tbody);
     rebuildGammaRefSelector();
-    if(_lastSigmasFull) displayErrors(_lastSigmasFull); // preserve σ display across any rebuild
+    if(_lastSigmasFull) displayErrors(_lastSigmasFull);
 }
 function makeInstRow(ds,idx,KU){
     const col=getDsColor(ds,idx),isActive=getChecked(`dsActive_${ds.id}`,true);
@@ -1715,29 +1713,25 @@ function makeInstRow(ds,idx,KU){
     const tr=makeEl('tr',{class:isActive?'':'inactive',style:{'--row-col':col}});
     tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name,style:{color:col}}));
 
-    const gTd=makeEl('td');
+    // γ cell: input + fit checkbox share one row (pt-cell-top), like the planet table
     const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
     gInp.disabled=!isActive;
     gInp.addEventListener('change',updateAllPanels); gInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-    gTd.appendChild(gInp); gTd.appendChild(makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`}));
-    tr.appendChild(gTd);
-
-    const gFitTd=makeEl('td');
     const gFitCb=makeEl('input',{type:'checkbox',id:`fitGamma_${ds.id}`,title:'Include γ in fit'});
     gFitCb.checked=prevFitGamma?prevFitGamma.checked:true; gFitCb.disabled=!isActive;
-    gFitTd.appendChild(gFitCb); tr.appendChild(gFitTd);
+    const gTop=makeEl('div',{class:'pt-cell-top'},[gInp,gFitCb]);
+    const gTd=makeEl('td',{},[gTop,makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`})]);
+    tr.appendChild(gTd);
 
-    const jTd=makeEl('td');
+    // s (jitter) cell: same pattern
     const jInp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
     jInp.disabled=!isActive;
     jInp.addEventListener('change',updateAllPanels); jInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
-    jTd.appendChild(jInp); jTd.appendChild(makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`}));
-    tr.appendChild(jTd);
-
-    const jFitTd=makeEl('td');
     const jFitCb=makeEl('input',{type:'checkbox',id:`fitJitter_${ds.id}`,title:'Include jitter in fit'});
     jFitCb.checked=prevFitJit?prevFitJit.checked:false; jFitCb.disabled=!isActive;
-    jFitTd.appendChild(jFitCb); tr.appendChild(jFitTd);
+    const jTop=makeEl('div',{class:'pt-cell-top'},[jInp,jFitCb]);
+    const jTd=makeEl('td',{},[jTop,makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`})]);
+    tr.appendChild(jTd);
 
     return tr;
 }
