@@ -96,6 +96,10 @@
         .panel-header h2 { color:var(--accent); font-size:16px; flex:0 0 auto; margin:0; }
         .panel-header-summary { font-size:12px; color:var(--text2); margin-left:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; display:none; }
         .panel-header-summary.visible { display:inline-block; }
+        .panel-header-summary span { cursor:pointer; margin-right:8px; }
+        .panel-header-summary span:hover { text-decoration:underline; }
+        .panel-header-summary span.inactive { opacity:.45; text-decoration:line-through; }
+        .panel-header-summary span.inactive:hover { text-decoration:underline; } /* underline wins over line-through on hover */
         .collapse-arrow { color:var(--accent); font-size:14px; flex:0 0 auto; transition:transform .2s; }
         .collapse-arrow.open  { transform:rotate(0deg); }
         .collapse-arrow.closed{ transform:rotate(-90deg); }
@@ -252,11 +256,14 @@
         .btn-fit { background:#4cc9f0; color:#000; }
         .btn-fit-top { background:#4cc9f0; color:#000; padding:3px 10px; font-size:12px; font-weight:bold; border:none; border-radius:5px; cursor:pointer; transition:background .2s,filter .2s; flex:0 0 auto; min-width:64px; text-align:center; }
         .btn-fit-top:hover { filter:brightness(.88); }
-        @keyframes fitbtn { 0%{content:'⏳';} 50%,100%{content:'⌛';} }
+        /* separate keyframes per button — content must be fully re-declared each frame,
+           sharing one @keyframes across buttons would make them show the same text */
+        @keyframes fitbtnFit { 0%{content:'⏳ Fitting…';} 50%,100%{content:'⌛ Fitting…';} }
+        @keyframes fitbtnGLS { 0%{content:'⏳ Computing…';} 50%,100%{content:'⌛ Computing…';} }
         .btn-fit:disabled,.btn-fit-top:disabled { opacity:1; filter:none; cursor:wait; }
         .btn-fit:disabled span,.btn-fit-top:disabled span { display:none; }
-        .btn-fit:disabled::before { content:'⏳ Fitting…'; animation:fitbtn 1s step-start infinite; }
-        .btn-fit-top:disabled::before { content:'⏳ Fitting…'; animation:fitbtn 1s step-start infinite; }
+        .btn-fit:disabled::before,.btn-fit-top:disabled::before { content:'⏳ Fitting…'; animation:fitbtnFit 1s step-start infinite; }
+        .btn-fit-top:disabled::before { animation:fitbtnFit 1s step-start infinite; }
         .btn-undo { background:#888; color:#fff; padding:8px 12px; }
         .btn-undo:disabled { opacity:.35; cursor:not-allowed; filter:none; }
         .btn-new    { background:#e9c46a; color:#000; } .btn-sample { background:#7209b7; color:#fff; }
@@ -269,7 +276,10 @@
            so cursor:wait never actually rendered. Kept clickable, guarded by JS reentrancy check. */
         .btn-gls-run.busy { opacity:1; filter:none; cursor:wait; }
         .btn-gls-run.busy span { display:none; }
-        .btn-gls-run.busy::before { content:'⏳ Computing…'; animation:fitbtn 1s step-start infinite; }
+        .btn-gls-run.busy::before { content:'⏳ Computing…'; animation:fitbtnGLS 1s step-start infinite; }
+        /* larger, easier-to-notice hit area: whole GLS panel shows wait cursor while busy.
+           Requires :has() support (Chrome 105+, Firefox 121+, Safari 15.4+). */
+        .panel-slot:has(.btn-gls-run.busy) { cursor:wait; }
         .btn-view   { background:none; border:1px solid var(--border); border-radius:5px; padding:4px 8px; font-size:12px; color:var(--text2); cursor:pointer; }
         .btn-view:hover { background:var(--bg3); } .btn-view.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
         .add-panel-row { display:flex; gap:8px; margin-bottom:20px; }
@@ -1041,7 +1051,7 @@ function renderGLSSlot(sid){
     updateGLSSlotTitle(slot);
     const{axBase,base,C}=makePlotBase();
     const xFreq=slot.xAxis==='freq';
-    const xTitle=xFreq?'Frequency [d⁻¹]':'Period <i>P</i> [days]';
+    const xTitle=xFreq?'Frequency <i>f</i> [d⁻¹]':'Period <i>P</i> [days]';
     const xAxisType=slot.xAxis==='logperiod'?'log':'linear';
     const plotDiv=el(`plotGLS_${sid}`);
     if(!slot._cache){
@@ -1073,9 +1083,14 @@ function updateGLSSlot(sid){
     const btn=el(`glsComputeBtn_${sid}`);
     if(btn?.classList.contains('busy')) return; // already computing, ignore reentrant clicks
     if(btn) btn.classList.add('busy');
+    const MIN_BUSY_MS=350; // guarantee the wait cursor/label stays visible long enough
+    const start=performance.now();               // to actually notice, even for near-instant data
     setTimeout(()=>{
         try{ computeGLSData(sid); renderGLSSlot(sid); }
-        finally{ if(btn) btn.classList.remove('busy'); }
+        finally{
+            const remaining=Math.max(0,MIN_BUSY_MS-(performance.now()-start));
+            setTimeout(()=>{ if(btn) btn.classList.remove('busy'); },remaining);
+        }
     },30);
 }
 
@@ -1538,10 +1553,20 @@ function updateDataHeaderSummary(){
         datasets.forEach((ds,i)=>{
             const isActive=getChecked(`dsActive_${ds.id}`,true);
             const col=getDsColor(ds,i);
-            summary.appendChild(makeEl('span',{text:ds.name,style:{color:col,opacity:isActive?'1':'.45',textDecoration:isActive?'none':'line-through',marginRight:'8px'}}));
-        });
+            const span=makeEl('span',{text:ds.name,title:'Click to open this dataset',
+                class:isActive?'':'inactive',
+                style:{color:col}});
+            span.addEventListener('click',e=>{ e.stopPropagation(); openDatasetTab(ds.id); });
+            summary.appendChild(span);
+        });q
         summary.classList.add('visible');
     } else summary.classList.remove('visible');
+}
+function openDatasetTab(id){
+    const body=el('dataBody'),arrow=el('dataArrow');
+    body.classList.remove('hidden'); arrow.classList.add('open'); arrow.classList.remove('closed');
+    updateDataHeaderSummary();
+    switchTab(id);
 }
 
 // ── Render tabs ───────────────────────────────────────────────────────────────
