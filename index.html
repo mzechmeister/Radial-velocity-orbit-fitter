@@ -332,7 +332,7 @@
         .global-unit-sel:focus { outline:none; border-color:var(--accent2); }
     </style>
 </head>
-<body data-theme="dark">
+<body data-theme="dark" class="sidebar-mode">
 
 <div id="sidebarResizeHandle"></div>
 
@@ -349,7 +349,7 @@
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
     </div>
 
-    <button class="btn-view"  id="btnSidebar">⊳ Sidebar</button>
+    <button class="btn-view active" id="btnSidebar">⊲ Normal</button>
     <button class="theme-btn" id="btnTheme"  >🌓</button>
 
     <a class="github-link"
@@ -2376,7 +2376,7 @@ function loadProjectFromObj(proj){
         },100);
     });
     (o.panels||[{type:'plot'},{type:'gls'}]).forEach(pd=>addPanel(pd.type,pd));
-    if(o.sidebarMode) setTimeout(()=>toggleSidebar(true),50);
+    if(o.sidebarMode===false) toggleSidebar(false);
     if(o.gammaRefSrc!=null) setTimeout(()=>{ const sel=el('gammaRefSrc'); const valid=[...sel.options].map(op=>op.value); sel.value=valid.includes(String(o.gammaRefSrc))?String(o.gammaRefSrc):'custom'; setNumVal('gammaRefVal',o.gammaRefVal||0,4); onGammaRefSrcChange(); },300);
     setTimeout(()=>updateAllPanels(),350);
 }
@@ -2461,9 +2461,12 @@ function initStaticEvents(){
 window.onload=()=>{
     updateScrollbarWidth();
     initStaticEvents();
-    el('topRow').appendChild(el('paramPanel'));
+    // Default layout is sidebar mode — already set via body.sidebar-mode in the
+    // static HTML, so #paramPanel renders correctly (position:fixed) from the
+    // very first paint, before any JS/CDN scripts have even loaded. Avoids the
+    // "normal layout" flash that occurred when this was only applied in JS.
     const restored=restoreFromSession();
-    if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); toggleSidebar(true); }
+    if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); }
     setPlanetView(_planetView);
     updateDerived(); updateWindowTitle();
     setTimeout(()=>{
