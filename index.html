@@ -538,6 +538,8 @@ function makeEl(tag,props={},children=[]){
 function mean(arr){ if(!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
 function std(arr){ if(!arr.length) return 0; const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length); }
 function median(arr){ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
+// ── Angle normalization ────────────────────────────────────────────────────────
+function wrapDeg(v){ return ((v%360)+360)%360; } // normalize to [0,360)
 
 // ── Number formatting ─────────────────────────────────────────────────────────
 function sigDec(v){ if(!isFinite(v)||v===0) return 2; return Math.max(0,2-Math.floor(Math.log10(Math.abs(v)))); }
@@ -1918,7 +1920,7 @@ function setFullParamVector(p){
     planets.forEach((pl,i)=>{
         const b=i*5;
         pl.P=p[b]; pl.K_ms=p[b+1]; pl.e=p[b+2];
-        pl.omega_deg=p[b+3]*180/Math.PI; pl.t0=p[b+4];
+        pl.omega_deg=wrapDeg(p[b+3]*180/Math.PI); pl.t0=p[b+4];
         syncPlanetToDOM(pl);
     });
     const gStart=gammaOffset(),jStart=jitterOffset();
