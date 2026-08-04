@@ -102,10 +102,10 @@
         .data-panel { flex:1.4; min-width:0; overflow:hidden; }
 
         /* ── dataset tabs: inactive = var(--bg2) like planet All/+ tabs ── */
-        .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
-        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; color:var(--text2); cursor:pointer; user-select:none; transition:background .2s,color .2s,opacity .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
+        .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:-1px; }
+        .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); color:var(--text2); cursor:pointer; user-select:none; transition:background .2s,color .2s,opacity .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
         .ds-tab:not(.active) { background:var(--bg2); }
-        .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom:1px solid var(--tab-active); }
+        .ds-tab.active { background:var(--tab-active); color:var(--accent); font-weight:bold; border-bottom-color:var(--tab-active); }
         .ds-tab.drag-over { background:var(--accent2); opacity:.7; }
         .ds-tab.inactive { opacity:.5; }
         .ds-tab.dragging, .planet-tab.dragging { opacity:.4; }
@@ -114,7 +114,7 @@
         .ds-tab .tab-rename-input:focus,.planet-tab .tab-rename-input:focus { outline:none; }
         .ds-tab .close-btn,.planet-tab .close-btn { font-size:13px; line-height:1; background:none; border:none; cursor:pointer; color:var(--text2); opacity:.55; padding:0; flex:0 0 auto; transition:opacity .15s; }
         .ds-tab .close-btn:hover,.planet-tab .close-btn:hover { opacity:1; color:#f72585; }
-        .ds-tab-add { padding:5px 12px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:none; color:var(--accent); cursor:pointer; font-size:17px; font-weight:bold; margin-right:3px; line-height:1; transition:background .2s; }
+        .ds-tab-add { padding:5px 12px; border-radius:6px 6px 0 0; border:1px solid var(--border); background:none; color:var(--accent); cursor:pointer; font-size:17px; font-weight:bold; margin-right:3px; line-height:1; transition:background .2s; }
         .ds-tab-add:hover { background:var(--tab-inactive); }
         .ds-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--tab-active); padding:10px; overflow-x:auto; min-width:0; }
         .ds-pane { display:none; } .ds-pane.active { display:block; }
@@ -198,17 +198,17 @@
         .fit-table tr:hover td { background:var(--bg2); }
 
         /* ── planet tab bar ── */
-        .planet-tab-bar { display:flex; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; margin-bottom:0; }
+        .planet-tab-bar { display:flex; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; margin-bottom:-1px; border-bottom:1px solid transparent; }
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-        .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
+        .planet-tab { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); cursor:pointer; font-size:12px; user-select:none; transition:background .15s,color .15s; margin-right:3px; white-space:nowrap; flex-shrink:0; color:var(--text2); }
         .planet-tab:not(.active) { background:var(--bg2); }
-        .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom:1px solid var(--bg3); }
+        .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom-color:var(--bg3); }
         .planet-tab.tab-drag-over { border-top:3px solid var(--accent2); background:var(--tab-active); }
         #ptab_all { position:sticky; left:0; background:var(--bg2); z-index:2; }
         #ptab_all.active { background:var(--bg3); }
-        .planet-tab-add { padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); border-bottom:none; background:var(--bg2); color:var(--accent); cursor:pointer; font-size:16px; line-height:1; transition:background .15s; flex-shrink:0; position:sticky; right:0; z-index:2; }
+        .planet-tab-add { padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); background:var(--bg2); color:var(--accent); cursor:pointer; font-size:16px; line-height:1; transition:background .15s; flex-shrink:0; position:sticky; right:0; z-index:2; }
         .planet-tab-add:hover { background:var(--bg3); }
         .planet-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--bg3); padding:8px; }
         .planet-block { display:none; margin-bottom:6px; } .planet-block.active { display:block; } .planet-block.inactive { opacity:.45; }
