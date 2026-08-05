@@ -1692,45 +1692,50 @@ function rebuildGammaRefSelector(){
 // ── γ + jitter instrument table ────────────────────────────────────────────────
 function rebuildGammaUI(){
     const tbl=el('instTable'); if(!tbl) return;
-    tbl.innerHTML='';
+
+    // 1. Get current values from parameter vector (BEFORE table is cleared)
+    const p=getFullParamVector();
     const KU=getKUnit();
+    const gStart=gammaOffset(),jStart=jitterOffset();
+
+    tbl.innerHTML='';
     const headRow=makeEl('tr');
     headRow.appendChild(makeEl('th',{text:'Instrument'}));
     headRow.appendChild(makeEl('th',{html:`<em>γ</em> [${KU}]`}));
     headRow.appendChild(makeEl('th',{html:`<em>s</em> [${KU}]`}));
     tbl.appendChild(makeEl('thead',{},[headRow]));
     const tbody=makeEl('tbody');
-    datasets.forEach((ds,i)=>tbody.appendChild(makeInstRow(ds,i,KU)));
+    // 2. Pass saved values to makeInstRow
+    datasets.forEach((ds,i)=>tbody.appendChild(makeInstRow(ds,i,KU,
+        fromMs(p[gStart+i]||0,KU),
+        fromMs(Math.sqrt(Math.max(0,p[jStart+i]||0)),KU)
+    )));
     tbl.appendChild(tbody);
     rebuildGammaRefSelector();
     if(_lastSigmasFull) displayErrors(_lastSigmasFull);
 }
-function makeInstRow(ds,idx,KU){
+function makeInstRow(ds,idx,KU,savedG,savedJ){
     const col=getDsColor(ds,idx),isActive=getChecked(`dsActive_${ds.id}`,true);
-    const prevGamma=el(`pGamma_${ds.id}`),prevFitGamma=el(`fitGamma_${ds.id}`);
-    const gMs=prevGamma?toMs(parseFloat(prevGamma.value)||0,KU):(ds.gamma||0);
-    const prevJit=el(`pJitter_${ds.id}`),prevFitJit=el(`fitJitter_${ds.id}`);
-    const jitMs=prevJit?toMs(parseFloat(prevJit.value)||0,KU):0;
 
     const tr=makeEl('tr',{class:isActive?'':'inactive',style:{'--row-col':col}});
     tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name,style:{color:col}}));
 
-    // γ cell: input + fit checkbox share one row (pt-cell-top), like the planet table
-    const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:fromMs(gMs,KU).toFixed(4),step:'1'});
+    // γ cell - use saved values
+    const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:savedG.toFixed(4),step:'1'});
     gInp.disabled=!isActive;
     gInp.addEventListener('change',updateAllPanels); gInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
     const gFitCb=makeEl('input',{type:'checkbox',id:`fitGamma_${ds.id}`,title:'Include γ in fit'});
-    gFitCb.checked=prevFitGamma?prevFitGamma.checked:true; gFitCb.disabled=!isActive;
+    gFitCb.checked=true; gFitCb.disabled=!isActive;
     const gTop=makeEl('div',{class:'pt-cell-top'},[gInp,gFitCb]);
     const gTd=makeEl('td',{},[gTop,makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`})]);
     tr.appendChild(gTd);
 
-    // s (jitter) cell: same pattern
-    const jInp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:fromMs(jitMs,KU).toFixed(4),step:'0.1',min:'0'});
+    // s (jitter) cell - use saved values
+    const jInp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:savedJ.toFixed(4),step:'0.1',min:'0'});
     jInp.disabled=!isActive;
     jInp.addEventListener('change',updateAllPanels); jInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
     const jFitCb=makeEl('input',{type:'checkbox',id:`fitJitter_${ds.id}`,title:'Include jitter in fit'});
-    jFitCb.checked=prevFitJit?prevFitJit.checked:false; jFitCb.disabled=!isActive;
+    jFitCb.checked=false; jFitCb.disabled=!isActive;
     const jTop=makeEl('div',{class:'pt-cell-top'},[jInp,jFitCb]);
     const jTd=makeEl('td',{},[jTop,makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`})]);
     tr.appendChild(jTd);
