@@ -1209,7 +1209,7 @@ function buildPlanetTable(){
     });
     tbl.appendChild(makeEl('div',{class:'pt-label sep',html:'<em>m</em>&thinsp;sin&thinsp;<em>i</em>'}));
     planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptMass_${pl.pid}`,text:'—'})));
-    tbl.appendChild(makeEl('div',{class:'pt-label',html:'<em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]'}));
+    tbl.appendChild(makeEl('div',{class:'pt-label',html:'<em>a</em>&thinsp;sin&thinsp;<em>i</em> [au]'}));
     planets.forEach(pl=>tbl.appendChild(makeEl('div',{class:'pt-derived',id:`ptSma_${pl.pid}`,text:'—'})));
     planets.forEach(pl=>syncPlanetToDOM(pl));
     if(_lastSigmasFull) updateTableErrors(_lastSigmasFull);
@@ -1381,7 +1381,7 @@ function _buildPlanetBlock(pl,col,KU){
     const massRow=makeEl('div',{class:'planet-derived'});
     massRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>m</em>&thinsp;sin&thinsp;<em>i</em></span><span id="pMass_${pid}" class="d-val" style="font-size:12px;">—</span>`;
     const smaRow=makeEl('div',{class:'planet-derived'});
-    smaRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>a</em>&thinsp;sin&thinsp;<em>i</em> [AU]</span><span id="pSma_${pid}" class="d-val" style="font-size:12px;">—</span>`;
+    smaRow.innerHTML=`<span></span><span class="d-label" style="font-size:12px;"><em>a</em>&thinsp;sin&thinsp;<em>i</em> [au]</span><span id="pSma_${pid}" class="d-val" style="font-size:12px;">—</span>`;
     const body=makeEl('div',{class:'planet-body',id:`pBody_${pid}`},[pRow,kRow,eRow,omRow,t0Row,massRow,smaRow]);
     if(pl.active===false) body.querySelectorAll('input,select').forEach(e=>e.disabled=true);
     div.appendChild(header); div.appendChild(body);
@@ -2143,7 +2143,7 @@ function updateDerived(){
                 const{msini,sigma}=msiniWithError(K,P_days,e,sigK,sigP,sigE,Mstar_kg,sigMs_kg);
                 const mVal=msini/div,mSig=sigma/div;
                 massStr=(mSig>0&&isFinite(mSig))?`${fmtSig3(mVal)} ± ${fmtSig3(mSig)} ${unitStr}`:`${fmtSig3(mVal)} ${unitStr}`;
-                smaStr=`${semiMajorAxisSini(K,P_days,e).toFixed(5)} AU`;
+                smaStr=`${semiMajorAxisSini(K,P_days,e).toFixed(5)} au`;
             }catch(err){}
         }
         if(massEl) massEl.textContent=massStr;
