@@ -1479,18 +1479,31 @@ function buildDsPreview(id){
     const hasErr=parsed.some(r=>!r.isComment&&(()=>{ const e=parseFloat(r.err); return !isNaN(e)&&e>0; })());
     const nCols=hasErr?5:4;
 
+    const sortKey=ds._previewSort?.key||'lineIdx';
+    const sortDir=ds._previewSort?.dir||1;
+    const arrow=sortDir===1?' ▲':' ▼';
+
     const table=makeEl('table',{class:'ds-preview-table'});
     const headRow=makeEl('tr');
-    headRow.appendChild(makeEl('th'));
-    headRow.appendChild(makeEl('th'));
-    headRow.appendChild(makeEl('th',{text:'date (UTC)'}));
-    headRow.appendChild(makeEl('th',{html:bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]'}));
-    headRow.appendChild(makeEl('th',{text:`RV [${KU}]`}));
-    if(hasErr) headRow.appendChild(makeEl('th',{text:`err [${KU}]`}));
+    headRow.appendChild(makeEl('th',{html:`<em>n</em>${sortKey==='lineIdx'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='lineIdx'?'var(--accent2)':'transparent',color:sortKey==='lineIdx'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'lineIdx')}));
+    headRow.appendChild(makeEl('th',{html:`✓${sortKey==='clipped'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='clipped'?'var(--accent2)':'transparent',color:sortKey==='clipped'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'clipped')}));
+    headRow.appendChild(makeEl('th',{html:`date (UTC)${sortKey==='iso'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='iso'?'var(--accent2)':'transparent',color:sortKey==='iso'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'iso')}));
+    headRow.appendChild(makeEl('th',{html:(bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]')+(sortKey==='tAdj'?arrow:''),style:{cursor:'pointer',background:sortKey==='tAdj'?'var(--accent2)':'transparent',color:sortKey==='tAdj'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'tAdj')}));
+    headRow.appendChild(makeEl('th',{html:`RV [${KU}]${sortKey==='rv'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='rv'?'var(--accent2)':'transparent',color:sortKey==='rv'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'rv')}));
+    if(hasErr) headRow.appendChild(makeEl('th',{html:`err [${KU}]${sortKey==='err'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='err'?'var(--accent2)':'transparent',color:sortKey==='err'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'err')}));
     table.appendChild(makeEl('thead',{},[headRow]));
 
     const tbody=makeEl('tbody');
-    parsed.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,tRaw,rv,err,iso})=>{
+    const sorted=[...parsed].sort((a,b)=>{
+        if(a.isComment) return -1; if(b.isComment) return 1;
+        let cmp=0;
+        if(sortKey==='clipped') cmp=clipped.has(a.dataIdx)-clipped.has(b.dataIdx);
+        else if(sortKey==='lineIdx') cmp=a.lineIdx-b.lineIdx;
+        else if(sortKey==='iso') cmp=String(a.iso).localeCompare(String(b.iso));
+        else cmp=(parseFloat(a[sortKey])||0)-(parseFloat(b[sortKey])||0);
+        return sortDir*cmp;
+    });
+    sorted.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,tRaw,rv,err,iso})=>{
         const tr=makeEl('tr',{class:isComment?'comment':''});
         tr.appendChild(makeEl('td',{class:'pv-linenum',text:String(lineIdx+1)}));
         if(isComment){
@@ -1516,6 +1529,12 @@ function buildDsPreview(id){
     });
     table.appendChild(tbody);
     pv.appendChild(table);
+}
+function sortPreview(id,key){
+    const ds=dsById(id); if(!ds) return;
+    const current=ds._previewSort||{};
+    ds._previewSort={key,dir:current.key===key?-current.dir:1};
+    buildDsPreview(id);
 }
 
 // ── Add dataset ───────────────────────────────────────────────────────────────
