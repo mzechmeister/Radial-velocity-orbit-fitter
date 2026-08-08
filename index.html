@@ -1579,7 +1579,8 @@ function addDataset(initialText='',initialName=null,opts={}){
         placeholder:`# time [JD]    RV [${rvUnit}]    error [${rvUnit}]\n...`});
     editor.on('change',()=>{ rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); saveToSession(); });
     const gammaMs=opts.gammaMs!=null?opts.gammaMs:toMs(opts.gamma||0,rvUnit);
-    datasets.push({id,name,editor,rawRows:[],gamma:gammaMs,rvUnit,color:col,symbol:sym,opacity,size,t0ref});
+    const jitterMsSq=opts.jitterMsSq!=null?opts.jitterMsSq:(toMs(opts.jitter||0,rvUnit)**2);
+    datasets.push({id,name,editor,rawRows:[],gamma:gammaMs,jitterMsSq:jitterMsSq,rvUnit,color:col,symbol:sym,opacity,size,t0ref});
     renderTabs(); switchTab(id); applyThemeToEditors(); rebuildGammaUI();
     applyDsActiveStyle(id);
     if(initialText){ rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
@@ -1708,11 +1709,9 @@ function rebuildGammaRefSelector(){
 function rebuildGammaUI(){
     const tbl=el('instTable'); if(!tbl) return;
 
-    // Get current values from parameter vector (BEFORE table is cleared)
-    const p=getFullParamVector();
     const KU=getKUnit();
-    const gStart=gammaOffset(),jStart=jitterOffset();
 
+    // Get gamma/jitter from dataset objects (stored in m/s), NOT from DOM
     tbl.innerHTML='';
     const headRow=makeEl('tr');
     headRow.appendChild(makeEl('th',{text:'Instrument'}));
@@ -1720,10 +1719,9 @@ function rebuildGammaUI(){
     headRow.appendChild(makeEl('th',{html:`<em>s</em> [${KU}]`}));
     tbl.appendChild(makeEl('thead',{},[headRow]));
     const tbody=makeEl('tbody');
-    // Pass saved values to makeInstRow
     datasets.forEach((ds,i)=>tbody.appendChild(makeInstRow(ds,i,KU,
-        fromMs(p[gStart+i]||0,KU),
-        fromMs(Math.sqrt(Math.max(0,p[jStart+i]||0)),KU)
+        fromMs(ds.gamma||0,KU),
+        fromMs(Math.sqrt(Math.max(0,ds.jitterMsSq||0)),KU)
     )));
     tbl.appendChild(tbody);
     rebuildGammaRefSelector();
@@ -2451,7 +2449,17 @@ function initStaticEvents(){
     el('undoBtn').addEventListener('click',undoFit);
     el('gammaRefSrc').addEventListener('change',onGammaRefSrcChange);
     el('gammaRefVal').addEventListener('change',updateAllPanels);
-    el('globalUnit').addEventListener('change',()=>{ rebuildGammaUI(); updateAllPanels(); if(_planetView==='table') buildPlanetTable(); });
+    el('globalUnit').addEventListener('change',()=>{
+        planets.forEach(pl=>syncPlanetToDOM(pl));
+        rebuildGammaUI();
+        if(_planetView==='table') buildPlanetTable();
+        // Update all dataset previews that are currently visible
+        datasets.forEach(ds=>{
+            const pv=el(`preview_${ds.id}`);
+            if(pv && pv.style.display!=='none') buildDsPreview(ds.id);
+        });
+        updateAllPanels();
+    });
     el('globalBJD0').addEventListener('change',()=>{ updateAllPanels(); updateT0Labels(); if(_planetView==='table') buildPlanetTable(); });
     el('globalBJD0').addEventListener('keydown',e=>{ if(e.key==='Enter'){ updateAllPanels(); updateT0Labels(); } });
     el('starMass').addEventListener('change',updateDerived);
