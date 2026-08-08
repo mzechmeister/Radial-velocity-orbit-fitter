@@ -662,7 +662,7 @@ function rebuildGLSSubtractRows(){
         row.style.display='flex';
         row.appendChild(makeEl('span',{html:'<em>RV</em>'}));
         active.forEach(pl=>{
-            const col=planetColor(planetIndex(pl.pid));
+            const col=pl.color;
             row.appendChild(makeEl('span',{text:' − ',style:{color:'var(--text2)',opacity:'.5'}}));
             const cb=makeEl('input',{type:'checkbox',id:`glsSub_${slot.sid}_${pl.pid}`});
             if(!slot.glsSubtract) slot.glsSubtract={};
@@ -705,7 +705,7 @@ function buildGLSOverlay(sid){
     if(!glsLineStates[sid]) glsLineStates[sid]={};
     planets.filter(pl=>pl.active!==false).forEach(pl=>{
         const fitP=pl.P; if(fitP<pMin||fitP>pMax) return;
-        const col=planetColor(planetIndex(pl.pid));
+        const col=pl.color;
         if(!glsLineStates[sid][pl.pid]) glsLineStates[sid][pl.pid]={active:false};
         const state=glsLineStates[sid][pl.pid];
         const px=periodToPixelX(sid,fitP); if(px===null||!isFinite(px)) return;
@@ -1170,7 +1170,7 @@ function buildPlanetTable(){
     tbl.style.setProperty('--n-planets',n);
     tbl.appendChild(makeEl('div',{class:'pt-corner'}));
     planets.forEach((pl,i)=>{
-        const col=planetColor(i);
+        const col=pl.color;
         const nameInp=makeEl('input',{class:'planet-name-input',id:`ptName_${pl.pid}`,value:pl.name,style:{color:col}});
         nameInp.addEventListener('change',()=>onPlanetRename(pl.pid,nameInp.value));
         const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pl.pid}`,style:{accentColor:col,width:'13px',height:'13px',cursor:'pointer',flexShrink:'0'}});
@@ -1282,9 +1282,9 @@ function rebuildPlanetTabs(){
     allTab.addEventListener('click',()=>switchPlanetTab('all'));
     bar.appendChild(allTab);
     planets.forEach(pl=>{
-        const col=planetColor(planetIndex(pl.pid));
+        const col=pl.color;
         const isActive=pl.pid===activePlanetPid;
-        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,style:{borderTopColor:col,color:isActive?col:'var(--text2)'}});
+        const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,style:{'--planet-col':col,color:isActive?col:'var(--text2)'}});
         tab.appendChild(makeEl('span',{text:'●',style:{color:col,fontSize:'10px',opacity:pl.active===false?'.35':'1'}}));
         attachTabLabel(tab,pl.name,{onRename:n=>onPlanetRename(pl.pid,n)});
         attachTabCloseButton(tab,()=>removePlanet(pl.pid));
@@ -1316,12 +1316,19 @@ function switchPlanetTab(pid){
     activePlanetPid=pid;
     const showAll=pid==='all';
     planets.forEach(pl=>{ el(`planetBlock_${pl.pid}`)?.classList.toggle('active',showAll||pl.pid===pid); });
-    document.querySelectorAll('.planet-tab').forEach(t=>{
-        const p=t.id.replace('ptab_','');
-        const isActive=p===String(pid);
-        t.classList.toggle('active',isActive);
-        if(p==='all') t.style.color=isActive?'var(--accent)':'var(--text2)';
-        else{ const col=planetColor(planetIndex(parseInt(p))); t.style.color=isActive?col:'var(--text2)'; }
+
+    // Update "All" tab
+    const allTab=el('ptab_all');
+    if(allTab) allTab.style.color=(pid==='all')?'var(--accent)':'var(--text2)';
+
+    // Update planet tabs - iterate through planets directly
+    planets.forEach(pl=>{
+        const tab=el(`ptab_${pl.pid}`);
+        if(tab){
+            const isActive=pl.pid===pid;
+            tab.classList.toggle('active',isActive);
+            tab.style.color=isActive?pl.color:'var(--text2)';
+        }
     });
 }
 function _updatePlanetTabDot(pid){
@@ -1364,7 +1371,7 @@ function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
 function _buildPlanetBlock(pl,col,KU){
     const pid=pl.pid;
     const isAll=activePlanetPid==='all';
-    const div=makeEl('div',{class:'planet-block'+((pl.pid===activePlanetPid||isAll)?' active':'')+(pl.active===false?' inactive':''),id:`planetBlock_${pid}`});
+    const div=makeEl('div',{class:'planet-block'+((pl.pid===activePlanetPid||isAll)?' active':'')+(pl.active===false?' inactive':''),id:`planetBlock_${pid}`,style:{'--planet-col':col}});
     const activeCb=makeEl('input',{type:'checkbox',id:`pActive_${pid}`,title:'Enable/disable',style:{accentColor:col,width:'14px',height:'14px',cursor:'pointer',flex:'0 0 auto'}});
     activeCb.checked=pl.active!==false; activeCb.addEventListener('change',()=>onPlanetActiveToggle(pid));
     const nameInp=makeEl('input',{class:'planet-name-input',id:`pName_${pid}`,value:pl.name,style:{color:col}});
@@ -1389,7 +1396,7 @@ function _buildPlanetBlock(pl,col,KU){
 }
 
 function addPlanet(opts={}){
-    const pid=nextPlanetId++,i=planets.length,col=planetColor(i),KU=getKUnit();
+    const pid=nextPlanetId++,i=planets.length,col=opts.color||planetColor(i),KU=getKUnit();
     const bjd0=getGlobalBJD0();
     const allTs=datasets.flatMap(ds=>(ds.rawRows||[]).map(r=>r.t+getDsT0Ref(ds)-bjd0));
     const tMean=allTs.length?mean(allTs):0,tSpan=allTs.length>=2?Math.max(...allTs)-Math.min(...allTs):10;
@@ -1397,7 +1404,7 @@ function addPlanet(opts={}){
         K_ms:opts.K_ms??toMs(opts.K??1,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0:opts.t0??tMean,
         fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
         fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
-        active:opts.active??true,glsSubtract:opts.glsSubtract??true};
+        active:opts.active??true,glsSubtract:opts.glsSubtract??true,color:col};
     planets.push(pl); activePlanetPid=pid;
     _buildPlanetBlock(pl,col,KU);
     rebuildPlanetTabs(); switchPlanetTab(pid);
@@ -2199,7 +2206,7 @@ function buildTraces(p,foldPid,P,slot){
         const xC=Array.from({length:600},(_,i)=>fold?i/600*P:xMn+(xMx-xMn)*i/600);
         const xCplot=showDate&&!fold?xC.map(t=>jdToIso(t+bjd0)):xC;
         if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2}}); }
-        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=planetColor(i); const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:'legendonly',line:{color:col,width:1.5,dash:'dot'}}); }); } }
+        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:'legendonly',line:{color:col,width:1.5,dash:'dot'}}); }); } }
     }
     const tMinG=Math.min(...allTsRaw),tMaxG=Math.max(...allTsRaw);
     const pOrbitRef=[...p]; pOrbitRef[gammaOffset()]=gamRef;
@@ -2301,7 +2308,7 @@ function doFit(){
 // ── Project JSON ──────────────────────────────────────────────────────────────
 function buildProjectJSON(){
     const KU=getKUnit();
-    const planetsData=planets.map(pl=>({pid:pl.pid,name:pl.name,P:pl.P,K_ms:pl.K_ms,e:pl.e,omega_deg:pl.omega_deg,t0:pl.t0,fitP:pl.fitP,fitK:pl.fitK,fitE:pl.fitE,fitOmega:pl.fitOmega,fitT0:pl.fitT0,active:pl.active,glsSubtract:pl.glsSubtract??true}));
+    const planetsData=planets.map(pl=>({pid:pl.pid,name:pl.name,P:pl.P,K_ms:pl.K_ms,e:pl.e,omega_deg:pl.omega_deg,t0:pl.t0,fitP:pl.fitP,fitK:pl.fitK,fitE:pl.fitE,fitOmega:pl.fitOmega,fitT0:pl.fitT0,active:pl.active,glsSubtract:pl.glsSubtract??true,color:pl.color}));
     const p=getFullParamVector();
     const dsData=datasets.map((ds,idx)=>({
         name:ds.name,text:ds.editor.getValue(),t0ref:getNumVal(`t0ref_${ds.id}`),
@@ -2361,10 +2368,10 @@ function loadProjectFromObj(proj){
     const KU=proj.KUnit||'m/s';
     (proj.planets||[]).forEach(pd=>{
         nextPlanetId=Math.max(nextPlanetId,(pd.pid||0)+1);
-        const pl={pid:pd.pid||nextPlanetId++,name:pd.name||defaultPlanetName(planets.length),P:pd.P||10,K_ms:pd.K_ms||0,e:pd.e||0,omega_deg:pd.omega_deg||0,t0:pd.t0||0,fitP:pd.fitP??true,fitK:pd.fitK??true,fitE:pd.fitE??true,fitOmega:pd.fitOmega??true,fitT0:pd.fitT0??true,active:pd.active??true,glsSubtract:pd.glsSubtract??true};
+        const pl={pid:pd.pid||nextPlanetId++,name:pd.name||defaultPlanetName(planets.length),P:pd.P||10,K_ms:pd.K_ms||0,e:pd.e||0,omega_deg:pd.omega_deg||0,t0:pd.t0||0,fitP:pd.fitP??true,fitK:pd.fitK??true,fitE:pd.fitE??true,fitOmega:pd.fitOmega??true,fitT0:pd.fitT0??true,active:pd.active??true,glsSubtract:pd.glsSubtract??true,color:pd.color||planetColor(planets.length-1)};
         planets.push(pl);
         if(!activePlanetPid) activePlanetPid=pl.pid;
-        _buildPlanetBlock(pl,planetColor(planets.length-1),KU);
+        _buildPlanetBlock(pl,pl.color,KU);
         syncPlanetToDOM(pl);
     });
     rebuildPlanetTabs();
