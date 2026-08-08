@@ -418,7 +418,7 @@
                 <input type="number" id="starMassSig" value="0.0" step="0.01" min="0">
                 <span class="unit-lbl"><em>m</em> unit</span>
                 <select id="msiniUnit">
-                    <option value="Mjup">M♃</option><option value="Mear">M⊕</option><option value="Msun">M☉</option>
+                    <option value="Mear">M⊕</option><option value="Mjup">M♃</option><option value="Msun">M☉</option>
                 </select>
             </div>
 
@@ -1464,7 +1464,8 @@ function setDsView(id,view){
 }
 function buildDsPreview(id){
     const ds=dsById(id); if(!ds) return;
-    const pv=el(`preview_${id}`); pv.innerHTML='';
+    const pv=el(`preview_${id}`); if(!pv || pv.style.display==='none') return;
+    pv.innerHTML='';
     const clipOn=getChecked(`clipEnabled_${id}`,false),clipped=getClippedSet(id);
     const KU=getKUnit(),dsUnit=getDsUnit(ds),t0ref=getDsT0Ref(ds),bjd0=getGlobalBJD0();
     const parsed=[]; let dataIdx=0;
@@ -1532,8 +1533,8 @@ function addDataset(initialText='',initialName=null,opts={}){
         <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
         <label>α</label><input type="range" id="dsOpacity_${id}" min="0.05" max="1" step="0.05" value="${opacity}" title="Opacity">
-        <label title="Added to file times"><em>t</em><sub>0,ref</sub></label><input type="number" id="t0ref_${id}" value="${t0ref}" step="1">
-        <label>unit</label><select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select>
+        <label title="Added to file times"><em>t</em><sub>0,ref</sub> <input type="number" id="t0ref_${id}" value="${t0ref}" step="1"></label>
+        <label>unit raw <select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select></label>
     </div>
     <div class="view-toggle">
         <button id="btnRaw_${id}" class="active">Raw</button><button id="btnPrev_${id}">Preview</button>
@@ -1569,7 +1570,7 @@ function addDataset(initialText='',initialName=null,opts={}){
     el(`t0ref_${id}`).addEventListener('change',updateAllPanels);
     el(`t0ref_${id}`).addEventListener('keydown',e=>{ if(e.key==='Enter') updateAllPanels(); });
     el(`rvUnit_${id}`).addEventListener('change',()=>onDsUnitChange(id));
-    el(`clipEnabled_${id}`).addEventListener('change',()=>{ updateAllPanels(); const pv=el(`preview_${id}`); if(pv&&pv.style.display!=='none') buildDsPreview(id); });
+    el(`clipEnabled_${id}`).addEventListener('change',()=>{ updateAllPanels(); buildDsPreview(id); });
     el(`btnUrl_${id}`).addEventListener('click',()=>loadFromURL(id));
     el(`btnLoad_${id}`).addEventListener('click',()=>el(`fileInput_${id}`).click());
     el(`fileInput_${id}`).addEventListener('change',e=>loadFile(e,id));
@@ -1603,7 +1604,13 @@ function onDsStyleChange(id){
     rebuildGammaUI(); updateAllPanels();
     updateDataHeaderSummary();
 }
-function onDsUnitChange(id){ rebuildGammaUI(); updateStatsBar(id); updateAllPanels(); if(id===datasets[0]?.id) propagateUnitFromDs0(); }
+function onDsUnitChange(id){
+    rebuildGammaUI();
+    updateStatsBar(id);
+    updateAllPanels();
+    buildDsPreview(id);
+    if(id===datasets[0]?.id) propagateUnitFromDs0();
+}
 function removeDataset(id){
     if(datasets.length<=1){ showMsg('Cannot remove the last dataset.',false); return; }
     const idx=dsIndex(id); el(`pane_${id}`).remove(); datasets.splice(idx,1);
@@ -1784,9 +1791,9 @@ function rebuildClipTable(id){
     const tbody=el(`clipTbody_${id}`); tbody.innerHTML='';
     ds.rawRows.forEach((_,i)=>{ const tr=makeEl('tr',{id:`clipRow_${id}_${i}`}); const cb=makeEl('input',{type:'checkbox',id:`clip_${id}_${i}`}); cb.addEventListener('change',()=>onClipToggle(id,i)); tr.appendChild(makeEl('td',{},[cb])); tbody.appendChild(tr); });
     updateStatsBar(id); updateAllPanels();
-    const pv=el(`preview_${id}`); if(pv&&pv.style.display!=='none') buildDsPreview(id);
+    buildDsPreview(id);
 }
-function onClipToggle(id,i){ el(`clipRow_${id}_${i}`)?.classList.toggle('clipped',getChecked(`clip_${id}_${i}`,false)); updateAllPanels(); }
+function onClipToggle(id,i){ el(`clipRow_${id}_${i}`)?.classList.toggle('clipped',getChecked(`clip_${id}_${i}`,false)); updateAllPanels(); buildDsPreview(id); }
 function getClippedSet(id){ const s=new Set(); dsById(id)?.rawRows.forEach((_,i)=>{ if(getChecked(`clip_${id}_${i}`,false)) s.add(i); }); return s; }
 
 // ── Parse dataset ─────────────────────────────────────────────────────────────
@@ -2312,8 +2319,8 @@ function buildProjectJSON(){
         name:ds.name,text:ds.editor.getValue(),t0ref:getNumVal(`t0ref_${ds.id}`),
         rvUnit:el(`rvUnit_${ds.id}`)?.value||'m/s',
         active:getChecked(`dsActive_${ds.id}`,true),
-        gammaMs:p[gammaOffset()+idx]||0,
-        jitterMs:fromMs(Math.sqrt(Math.max(0,p[jitterOffset()+idx]||0)),KU),
+        gammaMs:ds.gamma||0,
+        jitterMsSq:ds.jitterMsSq||0,
         color:getDsColor(ds,idx),symbol:getDsSymbol(ds),opacity:getDsOpacity(ds),size:getDsSize(ds),
         fitGamma:getChecked(`fitGamma_${ds.id}`),fitJitter:getChecked(`fitJitter_${ds.id}`,false),
         clipped:ds.rawRows.map((_,i)=>getChecked(`clip_${ds.id}_${i}`,false)),
@@ -2378,10 +2385,11 @@ function loadProjectFromObj(proj){
     setPlanetView(o.planetView||'table');
     rebuildGLSSubtractRows();
     proj.datasets.forEach(saved=>{
-        addDataset(saved.text||'',saved.name||'Dataset',{t0ref:saved.t0ref||saved.bjd0||0,rvUnit:saved.rvUnit||'m/s',gammaMs:saved.gammaMs||0,color:saved.color,symbol:saved.symbol,opacity:saved.opacity,size:saved.size,active:saved.active});
+        addDataset(saved.text||'',saved.name||'Dataset',{t0ref:saved.t0ref||saved.bjd0||0,rvUnit:saved.rvUnit||'m/s',gammaMs:saved.gammaMs||0,jitterMsSq:saved.jitterMsSq||0,color:saved.color,symbol:saved.symbol,opacity:saved.opacity,size:saved.size,active:saved.active});
         const ds=datasets[datasets.length-1];
         setNumVal(`pGamma_${ds.id}`,fromMs(saved.gammaMs??0,KU),4);
-        if(saved.jitterMs!=null) setNumVal(`pJitter_${ds.id}`,saved.jitterMs,4);
+        const jit=Math.sqrt(Math.max(0,saved.jitterMsSq||0));
+        setNumVal(`pJitter_${ds.id}`,fromMs(jit,KU),4);
         const fitGamEl=el(`fitGamma_${ds.id}`); if(fitGamEl&&saved.fitGamma!=null) fitGamEl.checked=saved.fitGamma;
         const fitJitEl=el(`fitJitter_${ds.id}`); if(fitJitEl&&saved.fitJitter!=null) fitJitEl.checked=saved.fitJitter;
         setTimeout(()=>{
@@ -2453,11 +2461,7 @@ function initStaticEvents(){
         planets.forEach(pl=>syncPlanetToDOM(pl));
         rebuildGammaUI();
         if(_planetView==='table') buildPlanetTable();
-        // Update all dataset previews that are currently visible
-        datasets.forEach(ds=>{
-            const pv=el(`preview_${ds.id}`);
-            if(pv && pv.style.display!=='none') buildDsPreview(ds.id);
-        });
+        datasets.forEach(ds=>buildDsPreview(ds.id));
         updateAllPanels();
     });
     el('globalBJD0').addEventListener('change',()=>{ updateAllPanels(); updateT0Labels(); if(_planetView==='table') buildPlanetTable(); });
