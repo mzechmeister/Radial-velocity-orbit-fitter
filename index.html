@@ -123,7 +123,7 @@
         .ds-header label { white-space:nowrap; }
         .ds-header input[type=number] { width:80px; padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
         .ds-header input[type=number]:focus { outline:none; border-color:var(--accent2); }
-        .ds-header select { padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; }
+        .ds-header select { padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:auto; min-width:0; }
         .ds-header input[type=range] { width:70px; accent-color:var(--accent2); }
         .data-stats-bar { margin-top:6px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
         .stat-item { display:flex; gap:5px; } .stat-label { color:var(--accent); } .stat-val { color:var(--cyan); }
@@ -502,6 +502,7 @@
 const MSUN=1.989e30,MJUP=1.898e27,MEAR=5.972e24,AU=1.496e11,G=6.674e-11,DAY=86400;
 const PALETTE       =['#4cc9f0','#ff9f1c','#a0ff78','#f72585','#b5838d','#80ffdb'];
 const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down','cross','x','star'];
+const SYMBOLS_UNICODE=['●','■','◆','▲','▼','✚','✖','★'];
 const PLANET_COLORS =['#f72585','#a0ff78','#ffbe0b','#80ffdb','#b5838d','#ff9f1c'];
 const PLANET_LETTERS='bcdefghijklmnopqrstuvwxyz';
 
@@ -1560,7 +1561,7 @@ function addDataset(initialText='',initialName=null,opts={}){
     <div class="ds-header" id="dsHeader_${id}">
         <input type="checkbox" id="dsActive_${id}" title="Include dataset in fit/plots"${dsActive?' checked':''} style="width:14px;height:14px;accent-color:${col};cursor:pointer;flex:0 0 auto;margin-right:2px;">
         <input type="color" id="dsColor_${id}" value="${col}" title="Colour" style="width:26px;height:22px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
-        <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:11px;">${SYMBOLS.map(s=>`<option value="${s}"${s===sym?' selected':''}>${s}</option>`).join('')}</select>
+        <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:14px;width:auto;min-width:0;">${SYMBOLS.map((s,i)=>`<option value="${s}"${s===sym?' selected':''}>${SYMBOLS_UNICODE[i]}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
         <label>α</label><input type="range" id="dsOpacity_${id}" min="0.05" max="1" step="0.05" value="${opacity}" title="Opacity">
         <label title="Added to file times"><em>t</em><sub>0,ref</sub> <input type="number" id="t0ref_${id}" value="${t0ref}" step="1"></label>
@@ -1631,7 +1632,7 @@ function onDsStyleChange(id){
     const col=getDsColor(ds,dsIndex(id));
     const ew=el(`dsEditorWrap_${id}`); if(ew) ew.style.borderLeftColor=col;
     const tab=el(`tab_${id}`); if(tab) tab.style.borderTop=`3px solid ${col}`;
-    rebuildGammaUI(); updateAllPanels();
+    rebuildGammaUI(); updateAllPanelsLight();
     updateDataHeaderSummary();
 }
 function onDsUnitChange(id){
@@ -1679,7 +1680,7 @@ function renderTabs(){
 
     // ── All Datasets Summary Tab (first tab) ──────────────────────────────────
     const allTab=makeEl('div',{class:'ds-tab'+(activeId==='all'?' active':''),id:'tab_all',title:'All Datasets Summary'});
-    allTab.appendChild(makeEl('span',{class:'tab-label',text:'📋 All'}));
+    allTab.appendChild(makeEl('span',{class:'tab-label',text:'All'}));
     allTab.addEventListener('click',()=>switchTab('all'));
     bar.appendChild(allTab);
 
@@ -1849,9 +1850,9 @@ function renderAllDatasetsSummary(){
 
         // Symbol cell (select dropdown)
         const symCell=makeEl('td',{style:{textAlign:'center'}});
-        const symSelect=makeEl('select',{style:{fontSize:'11px',padding:'2px 4px',background:'var(--input-bg)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:'4px'}});
-        SYMBOLS.forEach(s=>{
-            const opt=makeEl('option',{value:s,text:s});
+        const symSelect=makeEl('select',{style:{fontSize:'14px',padding:'2px 4px',background:'var(--input-bg)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:'4px',width:'auto',minWidth:'0'}});
+        SYMBOLS.forEach((s,i)=>{
+            const opt=makeEl('option',{value:s,text:SYMBOLS_UNICODE[i]});
             if(s===sym) opt.selected=true;
             symSelect.appendChild(opt);
         });
@@ -1918,7 +1919,7 @@ function plotColours(){ return isDark()
     :{paper:'#f4f6fb',bg:'#ffffff',grid:'#dde4f0',zero:'#aab8cc',legendBg:'rgba(255,255,255,0.85)'}; }
 function peakMarkerColor(){ return isDark()?'#ffffff':'#1a6fc4'; }
 function applyThemeToEditors(){
-    const dark=isDark(),bg=dark?'#0d1b2a':'#ffffff',gut=dark?'#0a1628':'#e8edf5',col=dark?'#eee':'#1a1a2e',gcol=dark?'#4a6080':'#999';
+    const dark=isDark(),bg=dark?'#0d1b2a':'#ffffff',gut=dark?'#0a1628':'#e8edf5',col=dark?'#eee':'#1a1a2e',gcol=dark?'#8899aa':'#999';
     datasets.forEach(ds=>{ const w=ds.editor.getWrapperElement(); w.style.background=bg; w.style.color=col; w.querySelectorAll('.CodeMirror-gutters').forEach(g=>g.style.background=gut); w.querySelectorAll('.CodeMirror-linenumber').forEach(n=>n.style.color=gcol); });
 }
 function togglePanel(bodyId,arrowId){
@@ -2468,7 +2469,7 @@ function buildTraces(p,foldPid,P,slot){
         const res=rvsD.map((rv,i)=>rv-orb[i]);
         const colors=colorByTime?ts.map(t=>timeColor(t,tMinG,tMaxG)):null;
         const mc=colorByTime?{color:colors,size:sz,symbol:sym,opacity}:{color:col,size:sz,symbol:sym,opacity};
-        const mrc=colorByTime?{color:colors,size:Math.max(4,sz-2),symbol:'diamond',opacity}:{color:col,size:Math.max(4,sz-2),symbol:'diamond',opacity};
+        const mrc=colorByTime?{color:colors,size:Math.max(4,sz-2),symbol:sym,opacity}:{color:col,size:Math.max(4,sz-2),symbol:sym,opacity};
         trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,ds.name,mc,KU,{visible:dsVisible,meta:ds.id}));
         trRes.push(makeScatterTrace(xD,res,errsD,lineNums,`Res: ${ds.name}`,mrc,KU,{showlegend:false,visible:dsVisible}));
         if(showClipped&&clipped.ts.length>0){
@@ -2479,7 +2480,7 @@ function buildTraces(p,foldPid,P,slot){
             const mc_c={symbol:clippedStyle,color:col,size:sz,opacity:0.3,line:{width:1.5,color:col}};
             const htc=`%{customdata} clipped:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`;
             trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,`${ds.name} (clipped)`,mc_c,KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
-            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2)},KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
+            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2),symbol:sym},KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
         }
     });
     const xResL=showDate&&!fold?jdToIso(xMn+bjd0):xMn,xResR=showDate&&!fold?jdToIso(xMx+bjd0):xMx;
