@@ -29,15 +29,13 @@
             --text:#eee; --text2:#aaa; --accent:#a0c4ff; --accent2:#4cc9f0;
             --val:#a8ff78; --val2:#4cc9f0; --cyan:#a8dadc;
             --input-bg:#1e2d40;
-            --cm-bg:#0d1b2a; --cm-gutter:#0a1628; --cm-gutter-fg:#4a6080; --cm-cursor:#ffffff;
+            --cm-bg:#0d1b2a; --cm-gutter:#0a1628; --cm-gutter-fg:#8899aa; --cm-cursor:#ffffff;
             --tab-active:#0a1628; --tab-inactive:#0d1b2a;
             --legend-bg:rgba(13,27,42,0.8);
         }
         body { font-family:Arial,sans-serif; font-size:13px; background:var(--bg); color:var(--text); transition:background .3s,color .3s; }
-        /* form controls don't inherit font-size from ancestors by default in browsers' UA stylesheets */
         button, input, select, textarea { font:inherit; }
 
-        /* ── fixed project bar ── */
         .project-bar {
             position:fixed; top:0; left:0; right:0; z-index:300;
             display:flex; align-items:center; gap:4px;
@@ -101,7 +99,6 @@
         .panel-body.hidden { display:none; }
         .data-panel { flex:1.4; min-width:0; overflow:hidden; }
 
-        /* ── dataset tabs: inactive = var(--bg2) like planet All/+ tabs ── */
         .ds-tabs { display:flex; align-items:flex-end; flex-wrap:wrap; margin-bottom:-1px; }
         .ds-tab { display:flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); color:var(--text2); cursor:pointer; user-select:none; transition:background .2s,color .2s,opacity .2s; margin-right:3px; white-space:nowrap; max-width:180px; }
         .ds-tab:not(.active) { background:var(--bg2); }
@@ -134,10 +131,16 @@
         .view-toggle button.active { background:var(--accent2); color:#fff; border-color:var(--accent2); }
         .view-toggle label { margin-left:10px; font-size:12px; color:var(--text2); display:inline-flex; align-items:center; gap:4px; cursor:pointer; }
 
-        /* ── dataset preview: real table ── */
         .ds-preview { font-family:monospace; font-size:12px; background:var(--cm-bg); border:1px solid var(--border); border-radius:6px; padding:0; height:150px; overflow:auto; }
         .ds-preview-table { width:100%; border-collapse:collapse; font-family:monospace; font-size:12px; white-space:nowrap; }
-        .ds-preview-table th { position:sticky; top:0; background:var(--cm-bg); color:var(--accent); font-weight:normal; text-align:right; padding:2px 8px 4px 8px; border-bottom:1px solid var(--border); }
+        .ds-preview-table th { position:sticky; top:0; background:var(--cm-bg); color:var(--accent); font-weight:normal; text-align:right; padding:2px 8px 4px 8px; border-bottom:1px solid var(--border); vertical-align:baseline; cursor:pointer; }
+        .ds-preview-table th::after { content:'▲'; display:inline-block; font-size:14px; opacity:.9; pointer-events:none; margin-left:6px; vertical-align:baseline; visibility:hidden; }
+        .ds-preview-table th.sorted-asc { background:var(--cm-bg)!important; color:var(--accent)!important; border-bottom:2px solid var(--accent)!important; }
+        .ds-preview-table th.sorted-asc::after { content:'▲'; visibility:visible; }
+        .ds-preview-table th.sorted-desc { background:var(--cm-bg)!important; color:var(--accent)!important; border-bottom:1px solid var(--accent)!important; }
+        .ds-preview-table th.sorted-desc::after { content:'▼'; visibility:visible; }
+        .ds-preview-table th:not(.sorted-asc):not(.sorted-desc):hover { background:var(--bg3); }
+
         .ds-preview-table td { padding:1px 8px; text-align:right; }
         .ds-preview-table tr:hover td { background:var(--bg3); }
         .ds-preview-table tr.clipped td { opacity:.35; text-decoration:line-through; }
@@ -164,7 +167,6 @@
         .url-input { display:flex; align-items:center; gap:6px; width:100%; margin-top:6px; }
         .url-input input[type=text] { flex:1; padding:4px 6px; font-size:13px; }
 
-        /* ── param panel ── */
         .param-panel { flex:0 0 540px; position:relative; }
         .param-list { display:flex; flex-direction:column; gap:6px; }
         .param-item { display:grid; grid-template-columns:15px 160px 90px 80px auto; align-items:center; gap:6px; }
@@ -197,7 +199,6 @@
         .fit-table tr.total-row td { color:var(--val2); border-top:1px solid var(--border); font-weight:bold; }
         .fit-table tr:hover td { background:var(--bg2); }
 
-        /* ── planet tab bar ── */
         .planet-tab-bar { display:flex; align-items:flex-end; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; margin-bottom:-1px; border-bottom:1px solid transparent; }
         .planet-tab-bar::-webkit-scrollbar { height:3px; }
         .planet-tab-bar::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
@@ -219,7 +220,6 @@
         .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
         .planet-ctrl:hover { opacity:1; } .planet-ctrl.del:hover { color:#f72585; }
         .gamma-sigma { font-size:12px; color:var(--text2); font-family:monospace; }
-        /* ── instrument (γ/jitter) table ── */
         .inst-table { width:100%; border-collapse:collapse; }
         .inst-table th { text-align:right; padding:2px 6px 4px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:12px; }
         .inst-table th:first-child,.inst-table td:first-child { text-align:left; }
@@ -232,7 +232,6 @@
         .inst-table .gamma-sigma { display:block; margin-top:1px; }
         .inst-table tr.inactive td { opacity:.4; }
 
-        /* ── shared grid rows ── */
         .bjd0-row,.starmass-row { display:grid; align-items:center; gap:6px; padding:4px 0; }
         .bjd0-row { grid-template-columns:160px 90px auto auto; }
         .starmass-row { grid-template-columns:160px 90px 16px 70px auto auto; }
@@ -279,7 +278,6 @@
         .sidebar-close:hover { background:var(--bg3); }
         body:not(.sidebar-mode) .sidebar-close { display:none; }
 
-        /* ── planet table ── */
         #planetTableWrap { overflow-x:auto; display:flex; gap:8px; align-items:flex-start; }
         .btn-add-planet-table { padding:4px 10px; border-radius:6px; border:1px dashed var(--border); background:none; color:var(--accent2); cursor:pointer; font-size:15px; font-weight:bold; line-height:1; transition:background .2s; flex:0 0 auto; }
         .btn-add-planet-table:hover { background:var(--bg3); }
@@ -301,7 +299,6 @@
         #planetTabView, #planetTableView { min-height:120px; }
         .inset-box { background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:6px 8px; }
 
-        /* ── panel slots ── */
         .panel-slot { padding:10px; }
         .panel-slot-header { display:flex; align-items:center; gap:8px; user-select:none; margin-bottom:0; cursor:grab; }
         .panel-slot-header:active { cursor:grabbing; }
@@ -331,7 +328,6 @@
         .global-unit-sel { font-size:12px; padding:2px 6px; border-radius:4px; background:var(--input-bg); color:var(--accent); border:1px solid var(--border); cursor:pointer; }
         .global-unit-sel:focus { outline:none; border-color:var(--accent2); }
 
-        /* ── All Datasets Summary Table ── */
         .ds-summary-table { width:100%; border-collapse:collapse; font-size:12px; }
         .ds-summary-table th { text-align:left; padding:6px 8px; color:var(--accent); font-weight:normal; border-bottom:2px solid var(--border); font-size:11px; }
         .ds-summary-table td { padding:6px 8px; text-align:left; border-bottom:1px solid var(--border); }
@@ -498,7 +494,6 @@
 
 <script>
 'use strict';
-// ── Constants ─────────────────────────────────────────────────────────────────
 const MSUN=1.989e30,MJUP=1.898e27,MEAR=5.972e24,AU=1.496e11,G=6.674e-11,DAY=86400;
 const PALETTE       =['#4cc9f0','#ff9f1c','#a0ff78','#f72585','#b5838d','#80ffdb'];
 const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down','cross','x','star'];
@@ -518,7 +513,6 @@ function ptLabelHtml(key){
     return{P:'<em>P</em> [days]',K:`<em>K</em> [${KU}]`,e:'<em>e</em>',omega:'<em>ω</em> [°]',t0:tOmegaLabel()}[key];
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let planets=[],nextPlanetId=1,activePlanetPid=null;
 let datasets=[],activeId=null,nextId=1,lastSavedFilename=null;
 let rvModelCallCount=0,undoSnapshot=null,_lastSigmasFull=null;
@@ -528,7 +522,6 @@ let _planetView='table';
 let panels=[],nextPanelId=1,_dragPanelSid=null;
 const _slotSyncState={};
 
-// ── DOM helpers ───────────────────────────────────────────────────────────────
 const el        =id=>document.getElementById(id);
 const getNumVal =(id,fb=0)=>parseFloat(el(id)?.value)||fb;
 const getChecked=(id,fb=true)=>el(id)?el(id).checked:fb;
@@ -546,14 +539,11 @@ function makeEl(tag,props={},children=[]){
     return e;
 }
 
-// ── Math helpers ──────────────────────────────────────────────────────────────
 function mean(arr){ if(!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
 function std(arr){ if(!arr.length) return 0; const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length); }
 function median(arr){ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
-// ── Angle normalization ────────────────────────────────────────────────────────
-function wrapDeg(v){ return ((v%360)+360)%360; } // normalize to [0,360)
+function wrapDeg(v){ return ((v%360)+360)%360; }
 
-// ── Number formatting ─────────────────────────────────────────────────────────
 function sigDec(v){ if(!isFinite(v)||v===0) return 2; return Math.max(0,2-Math.floor(Math.log10(Math.abs(v)))); }
 function fmtSig3(v){ if(!isFinite(v)) return '—'; return v.toFixed(sigDec(v)); }
 function fmtRVPair(rv,err){
@@ -561,20 +551,16 @@ function fmtRVPair(rv,err){
     return{rvStr:isFinite(rv)?rv.toFixed(dec):'—',errStr:isFinite(err)&&err>0?err.toFixed(dec):''};
 }
 
-// ── Unit helpers ──────────────────────────────────────────────────────────────
 const toMs  =(v,u)=>u==='km/s'?v*1e3:v;
 const fromMs=(v,u)=>u==='km/s'?v/1e3:v;
 function getKUnit(){ return el('globalUnit')?.value||'m/s'; }
 function getDsUnit(ds){ return el(`rvUnit_${ds.id}`)?.value||ds.rvUnit||'m/s'; }
 
-// ── JD → ISO ─────────────────────────────────────────────────────────────────
 function jdToIso(jd){ if(!isFinite(jd)||jd<1) return '—'; return new Date((jd-2440587.5)*86400000).toISOString().slice(0,19).replace('T',' '); }
 
-// ── t_ω label ─────────────────────────────────────────────────────────────────
 function tOmegaLabel(){ const b=getGlobalBJD0()?'− BJD0 ':''; return `<em>t</em><sub><em>ω</em></sub> ${b}[days]`; }
 function updateT0Labels(){ planets.forEach(pl=>{ const inp=el(`pT0_${pl.pid}`); if(!inp) return; const lbl=inp.closest('.param-item')?.querySelector('label'); if(lbl) lbl.innerHTML=tOmegaLabel(); }); }
 
-// ── x-axis label ──────────────────────────────────────────────────────────────
 function xAxisLabel(slot){
     const bjd0=getGlobalBJD0();
     if(slot.foldPid!==null){ const pl=planets.find(p=>p.pid===slot.foldPid); return `Phase [days]  (${pl?.name||''})`; }
@@ -583,7 +569,6 @@ function xAxisLabel(slot){
     return 'Time <i>t</i> [days]';
 }
 
-// ── Plot base ─────────────────────────────────────────────────────────────────
 function makePlotBase(){
     const C=plotColours(),fontCol=isDark()?'#eee':'#1a1a2e';
     const minor={ticks:'inside',ticklen:3,tickcolor:C.grid};
@@ -592,15 +577,12 @@ function makePlotBase(){
     return{C,fontCol,axBase,base};
 }
 
-// ── Planet helpers ────────────────────────────────────────────────────────────
 function defaultPlanetName(i){ return 'Planet '+(PLANET_LETTERS[i]||String.fromCharCode(98+i)); }
 function planetColor(i){ return PLANET_COLORS[i%PLANET_COLORS.length]; }
 function planetIndex(pid){ return planets.findIndex(p=>p.pid===pid); }
 
-// ── GLS overlay refresh helper ────────────────────────────────────────────────
 const refreshGLSOverlays=()=>panels.filter(p=>p.type==='gls').forEach(p=>buildGLSOverlay(p.sid));
 
-// ── Scrollbar + sidebar ───────────────────────────────────────────────────────
 function updateScrollbarWidth(){ const w=window.innerWidth-document.documentElement.clientWidth; document.documentElement.style.setProperty('--scrollbar-w',(w||15)+'px'); }
 function getSidebarWidth(){ return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'))||440; }
 function initSidebarResize(){
@@ -616,7 +598,6 @@ function resizeAllPlots(){
     refreshGLSOverlays();
 }
 
-// ── Planet ↔ DOM sync (single source of truth: planet object) ─────────────────
 function syncPlanetToDOM(pl){
     const KU=getKUnit();
     setNumVal(`pP_${pl.pid}`,    pl.P,              6);
@@ -639,19 +620,15 @@ function syncTableToDOM(pid){
     syncPlanetToDOM(pl);
 }
 
-// ── Project ───────────────────────────────────────────────────────────────────
 function getProjectName(){ return el('projectName').value.trim()||'untitled'; }
 function updateWindowTitle(){ document.title=`${getProjectName()} – RV Fitter`; }
 
-// ── Session ───────────────────────────────────────────────────────────────────
 function saveToSession(){ try{ sessionStorage.setItem('rvfitter_project',JSON.stringify(buildProjectJSON())); }catch(e){} }
 function restoreFromSession(){ const raw=sessionStorage.getItem('rvfitter_project'); if(!raw) return false; try{ const proj=JSON.parse(raw); if(!proj.datasets) return false; loadProjectFromObj(proj); return true; }catch(e){ return false; } }
 
-// ── BJD0 ─────────────────────────────────────────────────────────────────────
 function getGlobalBJD0(){ return getNumVal('globalBJD0'); }
 function getDsT0Ref(ds){ return getNumVal(`t0ref_${ds.id}`); }
 
-// ── Fold selects ──────────────────────────────────────────────────────────────
 function rebuildFoldSelects(){
     panels.filter(p=>p.type==='plot').forEach(slot=>{
         const sel=el(`foldSelect_${slot.sid}`); if(!sel) return;
@@ -664,7 +641,6 @@ function rebuildFoldSelects(){
     });
 }
 
-// ── GLS subtract rows ─────────────────────────────────────────────────────────
 function rebuildGLSSubtractRows(){
     panels.filter(p=>p.type==='gls').forEach(slot=>{
         const row=el(`glsSubRow_${slot.sid}`); if(!row) return;
@@ -685,7 +661,6 @@ function rebuildGLSSubtractRows(){
     });
 }
 
-// ── GLS overlay ───────────────────────────────────────────────────────────────
 function glsLayoutOf(sid){ return el(`plotGLS_${sid}`)?._fullLayout||null; }
 function periodToPixelX(sid,P){
     const L=glsLayoutOf(sid); if(!L) return null;
@@ -752,7 +727,6 @@ function buildGLSOverlay(sid){
     svg.style.pointerEvents='none';
 }
 
-// ── GLS drag ──────────────────────────────────────────────────────────────────
 function _glsStartDrag(sid,pid,clientX){
     glsDragStates[sid]={pid,startClientX:clientX,currentPeriod:null,didMove:false};
     el(`glsOverlay_${sid}`).style.pointerEvents='all';
@@ -793,14 +767,12 @@ function _glsHandleCurveClick(sid,period){
     updateAllPanels(); buildGLSOverlay(sid); return true;
 }
 
-// ── Default opts ──────────────────────────────────────────────────────────────
 function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set()}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
     return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},_afterplotBound:false,_cache:null};
 }
 
-// ── Add panel ─────────────────────────────────────────────────────────────────
 function addPanel(type,opts={}){
     const sid=nextPanelId++;
     const slot=type==='plot'?{type:'plot',sid,...defaultPlotOpts(opts)}:{type:'gls',sid,...defaultGLSOpts(opts)};
@@ -810,7 +782,6 @@ function addPanel(type,opts={}){
     return slot;
 }
 
-// ── Build panel DOM ───────────────────────────────────────────────────────────
 function _buildPanelDOM(slot){
     const sid=slot.sid,type=slot.type;
     const panel=makeEl('div',{class:'panel panel-slot',id:`panelSlot_${sid}`});
@@ -937,7 +908,6 @@ function togglePanelSlot(sid){
     if(!open){ const slot=panels.find(p=>p.sid===sid); setTimeout(()=>{ if(slot?.type==='plot'){ Plotly.Plots.resize(`plotRV_${sid}`); if(slot.showRes) Plotly.Plots.resize(`plotRes_${sid}`); } else{ Plotly.Plots.resize(`plotGLS_${sid}`); buildGLSOverlay(sid); } },50); }
 }
 
-// ── X-axis zoom sync per plot slot (RV ↔ residuals) ───────────────────────────
 function _attachSlotZoomSync(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||!slot.showRes) return;
     const eRV=el(`plotRV_${sid}`),eRs=el(`plotRes_${sid}`); if(!eRV||!eRs) return;
@@ -952,22 +922,20 @@ function _attachSlotZoomSync(sid){
     eRs.on('plotly_relayout',state.rsL);
 }
 
-// ── Sync legend-click visibility between RV and Residuals plots ──────────────
 function _attachLegendClickHandler(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._legendClickBound) return;
     const eRV=el(`plotRV_${sid}`); if(!eRV) return;
     eRV.on('plotly_legendclick',ev=>{
         const trace=ev.data[ev.curveNumber];
-        if(trace?.meta==null) return true; // not a dataset trace (e.g. orbit line) → default Plotly toggle
+        if(trace?.meta==null) return true;
         const dsId=trace.meta;
         if(slot.hiddenDatasets.has(dsId)) slot.hiddenDatasets.delete(dsId); else slot.hiddenDatasets.add(dsId);
         updatePlotSlot(sid);
-        return false; // we rebuild both RV and Residuals ourselves, in sync
+        return false;
     });
     slot._legendClickBound=true;
 }
 
-// ── Panel title updates ────────────────────────────────────────────────────────
 function updatePlotSlotTitle(slot){
     const h2=el(`slotTitle_${slot.sid}`); if(!h2) return;
     const foldLbl=slot.foldPid!==null?(planets.find(p=>p.pid===slot.foldPid)?.name||'—'):'Time series';
@@ -987,7 +955,6 @@ function updateGLSSlotTitle(slot){
     h2.textContent=`🔭 GLS (P=${peakStr}, ${rvLbl})`;
 }
 
-// ── Update plot slot ──────────────────────────────────────────────────────────
 function updatePlotSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
     const p=getFullParamVector();
@@ -1021,13 +988,11 @@ function updatePlotSlot(sid){
     saveToSession();
 }
 
-// ── Compute GLS periodogram (expensive) — cached in slot._cache ───────────────
 function computeGLSData(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
     const dd=buildDatasetsData(),p=getFullParamVector();
     if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<4){ slot._cache=null; return; }
     const pMin=slot.pMin||1;
-    // Calculate time span from datasets
     const tSpan=dd.reduce((mx,d)=>{ const sp=Math.max(...d.ts)-Math.min(...d.ts); return sp>mx?sp:mx; },0)||10;
     const pMax=slot.pMax??(slot.ofac||10)*tSpan;
     const ofac=slot.ofac||10;
@@ -1056,7 +1021,6 @@ function computeGLSData(sid){
     slot._cache={periods,power,freqs,useExt,pMin,pMax};
 }
 
-// ── Render GLS plot (cheap) — reuses slot._cache, e.g. on pure x-axis switch ──
 function renderGLSSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
     updateGLSSlotTitle(slot);
@@ -1125,16 +1089,12 @@ function updateAllPanels(){
     panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else updateGLSSlot(p.sid); });
 }
 
-// ── Light panel refresh: rebuild plot/GLS visuals from current state without
-// re-running the (potentially expensive) GLS periodogram — used for label-only
-// changes like renaming, where the underlying data/fit is unaffected.
 function updateAllPanelsLight(){
     datasets.forEach(ds=>updateStatsBar(ds.id));
     el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
     panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else renderGLSSlot(p.sid); });
 }
 
-// ── New project ───────────────────────────────────────────────────────────────
 function newProject(){
     if(!confirm('Start a new project? Unsaved changes will be lost.')) return;
     datasets.forEach(ds=>el(`pane_${ds.id}`)?.remove());
@@ -1155,7 +1115,6 @@ function newProject(){
     showMsg('New project started.',true);
 }
 
-// ── Planet active toggle ──────────────────────────────────────────────────────
 function onPlanetActiveToggle(pid){
     const pl=planets.find(p=>p.pid===pid); if(!pl) return;
     pl.active=getChecked(`pActive_${pid}`);
@@ -1165,7 +1124,6 @@ function onPlanetActiveToggle(pid){
     rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); refreshGLSOverlays();
 }
 
-// ── Planet view toggle ────────────────────────────────────────────────────────
 function setPlanetView(view){
     _planetView=view;
     el('planetTabView').style.display   =view==='tabs' ?'':'none';
@@ -1175,7 +1133,6 @@ function setPlanetView(view){
     if(view==='table') buildPlanetTable();
 }
 
-// ── Planet TABLE view ─────────────────────────────────────────────────────────
 function buildPlanetTable(){
     const tbl=el('planetTable'); tbl.innerHTML='';
     const n=planets.length; if(!n) return;
@@ -1241,16 +1198,12 @@ function updateTableDerived(){
     });
 }
 
-// ── Shared tab building blocks (dataset tabs & planet tabs) ──────────────────
-// One implementation for label+rename and the close button, so both tab bars
-// behave identically instead of diverging (this is what caused the earlier
-// "planet tab not renameable" inconsistency).
 function attachTabLabel(tab,label,{onRename}={}){
     const lbl=makeEl('span',{class:'tab-label',text:label});
     tab.appendChild(lbl);
     if(onRename) tab.addEventListener('dblclick',e=>{
         e.stopPropagation();
-        const current=tab.querySelector('.tab-label'); // always the live element, not a stale closure ref
+        const current=tab.querySelector('.tab-label');
         if(current) startTabRename(tab,current,onRename);
     });
     return lbl;
@@ -1285,7 +1238,6 @@ function setupGenericDrag(tab,id,tabClass,overClass,getDragId,setDragId,onSwap){
     tab.addEventListener('drop',e=>{ e.preventDefault(); e.stopPropagation(); tab.classList.remove(overClass); if(getDragId()!=null&&getDragId()!==id) onSwap(getDragId(),id); });
 }
 
-// ── Planet tabs with drag-to-reorder ─────────────────────────────────────────
 function rebuildPlanetTabs(){
     const bar=el('planetTabBar'); bar.innerHTML='';
     const isAll=activePlanetPid==='all';
@@ -1328,12 +1280,8 @@ function switchPlanetTab(pid){
     activePlanetPid=pid;
     const showAll=pid==='all';
     planets.forEach(pl=>{ el(`planetBlock_${pl.pid}`)?.classList.toggle('active',showAll||pl.pid===pid); });
-
-    // Update "All" tab
     const allTab=el('ptab_all');
     if(allTab) allTab.style.color=(pid==='all')?'var(--accent)':'var(--text2)';
-
-    // Update planet tabs - iterate through planets directly
     planets.forEach(pl=>{
         const tab=el(`ptab_${pl.pid}`);
         if(tab){
@@ -1349,7 +1297,6 @@ function _updatePlanetTabDot(pid){
     const dot=tab.querySelector('span'); if(dot) dot.style.opacity=pl.active===false?'.35':'1';
 }
 
-// ── Planet param row (tab-view) ───────────────────────────────────────────────
 function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
     const fitCb=makeEl('input',{type:'checkbox',class:'param-fit-cb',id:fitId,title:'Include in fit'});
     fitCb.checked=extra.checked??true;
@@ -1379,7 +1326,6 @@ function makePlanetParamRow(pid,fitId,labelHtml,inputId,step,sigId,extra={}){
     return row;
 }
 
-// ── Build planet block ────────────────────────────────────────────────────────
 function _buildPlanetBlock(pl,col,KU){
     const pid=pl.pid;
     const isAll=activePlanetPid==='all';
@@ -1426,14 +1372,11 @@ function addPlanet(opts={}){
 function onPlanetRename(pid,newName){
     const pl=planets.find(p=>p.pid===pid); if(!pl) return;
     pl.name=(newName??'').trim()||defaultPlanetName(planetIndex(pid));
-    // each view has its own uniquely-id'd name input; sync whichever did NOT trigger this
     const blockInp=el(`pName_${pid}`),tableInp=el(`ptName_${pid}`);
     if(blockInp&&blockInp.value!==pl.name) blockInp.value=pl.name;
     if(tableInp&&tableInp.value!==pl.name) tableInp.value=pl.name;
-    rebuildPlanetTabs(); // cheap DOM-only rebuild: updates the tab's own label/order
+    rebuildPlanetTabs();
     rebuildGLSSubtractRows(); rebuildFoldSelects();
-    // rename only changes a label, not the fitted data — refresh legends/titles
-    // and the GLS overlay, but skip re-computing the periodogram itself
     updateAllPanelsLight();
     refreshGLSOverlays();
 }
@@ -1449,18 +1392,16 @@ function removePlanet(pid){
 
 function setFitBtnsDisabled(dis){ ['btnFit','btnFitTop'].forEach(id=>{ const b=el(id); if(b) b.disabled=dis; }); }
 
-// ── Dataset drag & drop ───────────────────────────────────────────────────────
 function setupDatasetDrag(tab,id){
     setupGenericDrag(tab,id,'ds-tab','drag-over',()=>dragDsPid,v=>{dragDsPid=v;},_swapDatasets);
 }
 function _swapDatasets(idA,idB){
     const iA=datasets.findIndex(d=>d.id===idA),iB=datasets.findIndex(d=>d.id===idB); if(iA<0||iB<0) return;
     [datasets[iA],datasets[iB]]=[datasets[iB],datasets[iA]];
-    clearErrors(); // dataset order/indices shift; stale σ would otherwise be mis-attributed
+    clearErrors();
     renderTabs(); rebuildGammaUI(); updateAllPanels();
 }
 
-// ── Dataset helpers ───────────────────────────────────────────────────────────
 function getDsColor(ds,idx){ return el(`dsColor_${ds.id}`)?.value||PALETTE[idx%PALETTE.length]; }
 function getDsSymbol(ds){ return el(`dsSymbol_${ds.id}`)?.value||'circle'; }
 function getDsOpacity(ds){ return parseFloat(el(`dsOpacity_${ds.id}`)?.value)||1.0; }
@@ -1468,7 +1409,6 @@ function getDsSize(ds){ return parseInt(el(`dsSize_${ds.id}`)?.value)||8; }
 function dsIndex(id){ return datasets.findIndex(d=>d.id===id); }
 function dsById(id){ return datasets.find(d=>d.id===id); }
 
-// ── Preview ───────────────────────────────────────────────────────────────────
 function setDsView(id,view){
     const cm=el(`cmWrap_${id}`),pv=el(`preview_${id}`),btnRaw=el(`btnRaw_${id}`),btnPrev=el(`btnPrev_${id}`);
     if(view==='raw'){ cm.style.display='block'; pv.style.display='none'; btnRaw.classList.add('active'); btnPrev.classList.remove('active'); dsById(id)?.editor.refresh(); }
@@ -1493,16 +1433,15 @@ function buildDsPreview(id){
 
     const sortKey=ds._previewSort?.key||'lineIdx';
     const sortDir=ds._previewSort?.dir||1;
-    const arrow=sortDir===1?' ▲':' ▼';
 
     const table=makeEl('table',{class:'ds-preview-table'});
     const headRow=makeEl('tr');
-    headRow.appendChild(makeEl('th',{html:`<em>n</em>${sortKey==='lineIdx'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='lineIdx'?'var(--accent2)':'transparent',color:sortKey==='lineIdx'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'lineIdx')}));
-    headRow.appendChild(makeEl('th',{html:`✓${sortKey==='clipped'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='clipped'?'var(--accent2)':'transparent',color:sortKey==='clipped'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'clipped')}));
-    headRow.appendChild(makeEl('th',{html:`date (UTC)${sortKey==='iso'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='iso'?'var(--accent2)':'transparent',color:sortKey==='iso'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'iso')}));
-    headRow.appendChild(makeEl('th',{html:(bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]')+(sortKey==='tAdj'?arrow:''),style:{cursor:'pointer',background:sortKey==='tAdj'?'var(--accent2)':'transparent',color:sortKey==='tAdj'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'tAdj')}));
-    headRow.appendChild(makeEl('th',{html:`RV [${KU}]${sortKey==='rv'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='rv'?'var(--accent2)':'transparent',color:sortKey==='rv'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'rv')}));
-    if(hasErr) headRow.appendChild(makeEl('th',{html:`err [${KU}]${sortKey==='err'?arrow:''}`,style:{cursor:'pointer',background:sortKey==='err'?'var(--accent2)':'transparent',color:sortKey==='err'?'#fff':'var(--text2)'},onclick:()=>sortPreview(id,'err')}));
+headRow.appendChild(makeEl('th',{html:`<em>n</em>`,class:sortKey==='lineIdx'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'lineIdx')}));
+headRow.appendChild(makeEl('th',{html:`✓`,class:sortKey==='clipped'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'clipped')}));
+headRow.appendChild(makeEl('th',{html:`date (UTC)`,class:sortKey==='iso'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'iso')}));
+headRow.appendChild(makeEl('th',{html:(bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]'),class:sortKey==='tAdj'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'tAdj')}));
+headRow.appendChild(makeEl('th',{html:`RV [${KU}]`,class:sortKey==='rv'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'rv')}));
+if(hasErr) headRow.appendChild(makeEl('th',{html:`err [${KU}]`,class:sortKey==='err'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'err')}));
     table.appendChild(makeEl('thead',{},[headRow]));
 
     const tbody=makeEl('tbody');
@@ -1549,7 +1488,6 @@ function sortPreview(id,key){
     buildDsPreview(id);
 }
 
-// ── Add dataset ───────────────────────────────────────────────────────────────
 function addDataset(initialText='',initialName=null,opts={}){
     const id=nextId++,idx=datasets.length,name=initialName||`Dataset ${idx+1}`;
     const col=opts.color||PALETTE[idx%PALETTE.length];
@@ -1645,11 +1583,10 @@ function onDsUnitChange(id){
 function removeDataset(id){
     if(datasets.length<=1){ showMsg('Cannot remove the last dataset.',false); return; }
     const idx=dsIndex(id); el(`pane_${id}`).remove(); datasets.splice(idx,1);
-    clearErrors(); // dataset indices shift; stale σ would otherwise be mis-attributed
+    clearErrors();
     renderTabs(); switchTab(datasets[Math.min(idx,datasets.length-1)].id); rebuildGammaUI(); updateAllPanels();
 }
 
-// ── Data panel header summary (shown when panel is collapsed) ─────────────────
 function updateDataHeaderSummary(){
     const summary=el('dataHeaderSummary'); if(!summary) return;
     const collapsed=el('dataBody').classList.contains('hidden');
@@ -1674,11 +1611,8 @@ function openDatasetTab(id){
     switchTab(id);
 }
 
-// ── Render tabs ───────────────────────────────────────────────────────────────
 function renderTabs(){
     const bar=el('dsTabs'); bar.innerHTML='';
-
-    // ── All Datasets Summary Tab (first tab) ──────────────────────────────────
     const allTab=makeEl('div',{class:'ds-tab'+(activeId==='all'?' active':''),id:'tab_all',title:'All Datasets Summary'});
     allTab.appendChild(makeEl('span',{class:'tab-label',text:'All'}));
     allTab.addEventListener('click',()=>switchTab('all'));
@@ -1703,21 +1637,14 @@ function renderTabs(){
     updateDataHeaderSummary();
 }
 
-// ── Switch Tab ───────────────────────────────────────────────────────────────
 function switchTab(id){
     activeId=id;
-
-    // Update dataset tabs & panes
     datasets.forEach(ds=>{
         el(`pane_${ds.id}`)?.classList.toggle('active',ds.id===id);
         el(`tab_${ds.id}`)?.classList.toggle('active',ds.id===id);
     });
-
-    // Update "All" tab & pane
     el('tab_all')?.classList.toggle('active',id==='all');
     el('pane_all')?.classList.toggle('active',id==='all');
-
-    // Hide other panes when "All" is active
     if(id==='all'){
         el('dsPanes').querySelectorAll('.ds-pane').forEach(p=>{
             if(p.id!=='pane_all') p.classList.remove('active');
@@ -1728,26 +1655,6 @@ function switchTab(id){
     }
 }
 
-// ── All Datasets Summary Table ────────────────────────────────────────────────
-function calcQualityScore(ds){
-    const n=ds.n||1;
-    const nClip=ds.nClip||0;
-    const span=ds.span||1;
-    const medErr=ds.medErr||1;
-    const nScore=Math.min(100,(n-nClip)/5);
-    const spanScore=Math.min(100,span/50);
-    const errScore=Math.max(0,100-medErr*5);
-    return Math.round((nScore+spanScore+errScore)/3);
-}
-
-function renderQualityBar(score){
-    const filled=Math.round(score/10);
-    const empty=10-filled;
-    const color=score>=70?'#0a7c3e':score>=40?'#e9c46a':'#f72585';
-    return `<span style="color:${color}">${'█'.repeat(filled)}${'░'.repeat(empty)}</span> ${score}%`;
-}
-
-// ── All Datasets Summary Table ────────────────────────────────────────────────
 function calcQualityScore(ds){
     const n=ds.n||1;
     const nClip=ds.nClip||0;
@@ -1768,8 +1675,6 @@ function renderQualityBar(score){
 
 function renderAllDatasetsSummary(){
     const dsPanes=el('dsPanes'); if(!dsPanes) return;
-
-    // Remove existing pane_all if present
     const existingPane=el('pane_all');
     if(existingPane) existingPane.remove();
 
@@ -1810,7 +1715,6 @@ function renderAllDatasetsSummary(){
         const quality=calcQualityScore({n,nClip,span,medErr});
         const sym=getDsSymbol(ds);
 
-        // Collect all timestamps for total span calculation
         ts.forEach(t=>allTs.push(t));
 
         totalN+=n; totalClip+=nClip;
@@ -1818,7 +1722,6 @@ function renderAllDatasetsSummary(){
 
         const tr=makeEl('tr',{style:{opacity:isActive?'1':'0.5'}});
 
-        // Status cell (checkbox like in tabs)
         const statusCell=makeEl('td',{style:{textAlign:'center'}});
         const statusCb=makeEl('input',{type:'checkbox',title:'Include dataset in fit/plots',style:{width:'14px',height:'14px',accentColor:ds.color,cursor:'pointer'}});
         statusCb.checked=isActive;
@@ -1829,7 +1732,6 @@ function renderAllDatasetsSummary(){
         statusCell.appendChild(statusCb);
         tr.appendChild(statusCell);
 
-        // Color picker cell (Option B)
         const colorCell=makeEl('td');
         const colorCircle=makeEl('div',{
             class:'ds-color-circle',
@@ -1848,7 +1750,6 @@ function renderAllDatasetsSummary(){
         colorCell.appendChild(hiddenPicker);
         tr.appendChild(colorCell);
 
-        // Symbol cell (select dropdown)
         const symCell=makeEl('td',{style:{textAlign:'center'}});
         const symSelect=makeEl('select',{style:{fontSize:'14px',padding:'2px 4px',background:'var(--input-bg)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:'4px',width:'auto',minWidth:'0'}});
         SYMBOLS.forEach((s,i)=>{
@@ -1865,37 +1766,29 @@ function renderAllDatasetsSummary(){
         symCell.appendChild(symSelect);
         tr.appendChild(symCell);
 
-        // Name cell
         const nameCell=makeEl('td',{text:ds.name,style:{cursor:'pointer',color:ds.color}});
         nameCell.addEventListener('click',()=>switchTab(ds.id));
         tr.appendChild(nameCell);
 
-        // N (clip) cell
         tr.appendChild(makeEl('td',{text:`${n} (${nClip})`}));
-
-        // Span cell
         tr.appendChild(makeEl('td',{text:span.toFixed(1)}));
 
-        // σ(RV) cell
         const KU=getKUnit();
         const dsUnit=getDsUnit(ds);
         const sigmaMs=toMs(sigma,dsUnit);
         const sigmaDisp=fromMs(sigmaMs,KU);
         tr.appendChild(makeEl('td',{text:sigmaDisp.toFixed(2)}));
 
-        // median err cell
         const medErrMs=toMs(isNaN(medErr)?0:medErr,dsUnit);
         const medErrDisp=fromMs(medErrMs,KU);
         tr.appendChild(makeEl('td',{text:isNaN(medErr)?'—':medErrDisp.toFixed(1)}));
 
-        // Quality cell
         tr.appendChild(makeEl('td',{class:'quality-bar',html:renderQualityBar(quality)}));
 
         tbody.appendChild(tr);
     });
     table.appendChild(tbody);
 
-    // Total row in table
     const totalSpan=allTs.length>0?(Math.max(...allTs)-Math.min(...allTs)):0;
     const weightedSigma=weightedSigmaCount>0?weightedSigmaSum/weightedSigmaCount:0;
     const totalTr=makeEl('tr',{class:'total-row'});
@@ -1911,7 +1804,6 @@ function renderAllDatasetsSummary(){
     dsPanes.appendChild(summaryPane);
 }
 
-// ── Theme ─────────────────────────────────────────────────────────────────────
 const isDark=()=>document.body.getAttribute('data-theme')==='dark';
 function toggleTheme(){ document.body.setAttribute('data-theme',isDark()?'light':'dark'); applyThemeToEditors(); updateAllPanels(); }
 function plotColours(){ return isDark()
@@ -1919,8 +1811,8 @@ function plotColours(){ return isDark()
     :{paper:'#f4f6fb',bg:'#ffffff',grid:'#dde4f0',zero:'#aab8cc',legendBg:'rgba(255,255,255,0.85)'}; }
 function peakMarkerColor(){ return isDark()?'#ffffff':'#1a6fc4'; }
 function applyThemeToEditors(){
-    const dark=isDark(),bg=dark?'#0d1b2a':'#ffffff',gut=dark?'#0a1628':'#e8edf5',col=dark?'#eee':'#1a1a2e',gcol=dark?'#8899aa':'#999';
-    datasets.forEach(ds=>{ const w=ds.editor.getWrapperElement(); w.style.background=bg; w.style.color=col; w.querySelectorAll('.CodeMirror-gutters').forEach(g=>g.style.background=gut); w.querySelectorAll('.CodeMirror-linenumber').forEach(n=>n.style.color=gcol); });
+    const dark=isDark(),bg=dark?'#0d1b2a':'#ffffff',gut=dark?'#0a1628':'#e8edf5',col=dark?'#eee':'#1a1a2e';
+    datasets.forEach(ds=>{ const w=ds.editor.getWrapperElement(); w.style.background=bg; w.style.color=col; w.querySelectorAll('.CodeMirror-gutters').forEach(g=>g.style.background=gut); });
 }
 function togglePanel(bodyId,arrowId){
     const body=el(bodyId),arrow=el(arrowId),open=!body.classList.contains('hidden');
@@ -1928,11 +1820,9 @@ function togglePanel(bodyId,arrowId){
     if(bodyId==='dataBody') updateDataHeaderSummary();
 }
 
-// ── Unit propagation ──────────────────────────────────────────────────────────
 function detectUnitFromHeader(text){ for(const line of text.split('\n')){ const l=line.trim(); if(!l) continue; const low=l.toLowerCase(); if(low.includes('km/s')) return 'km/s'; if(low.includes('m/s')) return 'm/s'; break; } return null; }
 function propagateUnitFromDs0(){ if(!datasets.length) return; const det=detectUnitFromHeader(datasets[0].editor.getValue()); if(!det) return; const dsEl=el(`rvUnit_${datasets[0].id}`); if(dsEl&&dsEl.value!==det) dsEl.value=det; }
 
-// ── γ_ref ─────────────────────────────────────────────────────────────────────
 function getGammaRefMs(){
     const src=el('gammaRefSrc').value;
     if(src==='custom') return toMs(getNumVal('gammaRefVal'),getKUnit());
@@ -1943,7 +1833,7 @@ function onGammaRefSrcChange(){
     const src=el('gammaRefSrc').value,isCustom=src==='custom';
     el('gammaRefVal').disabled=!isCustom;
     if(!isCustom){ const idx=datasets.findIndex(d=>d.id===parseInt(src)); if(idx>=0) setNumVal('gammaRefVal',fromMs(getFullParamVector()[gammaOffset()+idx]||0,getKUnit()),4); }
-    updateAllPanelsLight(); // γ-reference only shifts the plotted curve offset, never affects the fit/GLS periodogram
+    updateAllPanelsLight();
 }
 function rebuildGammaRefSelector(){
     const sel=el('gammaRefSrc'),prev=sel.value;
@@ -1953,13 +1843,9 @@ function rebuildGammaRefSelector(){
     sel.value=valid.includes(prev)?prev:'custom'; onGammaRefSrcChange();
 }
 
-// ── γ + jitter instrument table ────────────────────────────────────────────────
 function rebuildGammaUI(){
     const tbl=el('instTable'); if(!tbl) return;
-
     const KU=getKUnit();
-
-    // Get gamma/jitter from dataset objects (stored in m/s), NOT from DOM
     tbl.innerHTML='';
     const headRow=makeEl('tr');
     headRow.appendChild(makeEl('th',{text:'Instrument'}));
@@ -1977,11 +1863,8 @@ function rebuildGammaUI(){
 }
 function makeInstRow(ds,idx,KU,savedG,savedJ){
     const col=getDsColor(ds,idx),isActive=getChecked(`dsActive_${ds.id}`,true);
-
     const tr=makeEl('tr',{class:isActive?'':'inactive',style:{'--row-col':col}});
     tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name,style:{color:col}}));
-
-    // γ cell - use saved values
     const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:savedG.toFixed(4),step:'1'});
     gInp.disabled=!isActive;
     gInp.addEventListener('change',updateAllPanels); gInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
@@ -1990,8 +1873,6 @@ function makeInstRow(ds,idx,KU,savedG,savedJ){
     const gTop=makeEl('div',{class:'pt-cell-top'},[gInp,gFitCb]);
     const gTd=makeEl('td',{},[gTop,makeEl('span',{class:'gamma-sigma',id:`sigGamma_${ds.id}`})]);
     tr.appendChild(gTd);
-
-    // s (jitter) cell - use saved values
     const jInp=makeEl('input',{type:'number',id:`pJitter_${ds.id}`,value:savedJ.toFixed(4),step:'0.1',min:'0'});
     jInp.disabled=!isActive;
     jInp.addEventListener('change',updateAllPanels); jInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
@@ -2000,11 +1881,9 @@ function makeInstRow(ds,idx,KU,savedG,savedJ){
     const jTop=makeEl('div',{class:'pt-cell-top'},[jInp,jFitCb]);
     const jTd=makeEl('td',{},[jTop,makeEl('span',{class:'gamma-sigma',id:`sigJitter_${ds.id}`})]);
     tr.appendChild(jTd);
-
     return tr;
 }
 
-// ── Stats bar ─────────────────────────────────────────────────────────────────
 function updateStatsBar(id){
     const d=parseDatasetRaw(id),bar=el(`statsBar_${id}`);
     if(!d||!d.ts.length){ bar.style.display='none'; return; }
@@ -2019,7 +1898,6 @@ function updateStatsBar(id){
     bar.style.display='flex';
 }
 
-// ── Clip table ────────────────────────────────────────────────────────────────
 function rebuildClipTable(id){
     const ds=dsById(id); if(!ds) return; ds.rawRows=[];
     let ln=0;
@@ -2037,7 +1915,6 @@ function rebuildClipTable(id){
 function onClipToggle(id,i){ el(`clipRow_${id}_${i}`)?.classList.toggle('clipped',getChecked(`clip_${id}_${i}`,false)); updateAllPanels(); buildDsPreview(id); }
 function getClippedSet(id){ const s=new Set(); dsById(id)?.rawRows.forEach((_,i)=>{ if(getChecked(`clip_${id}_${i}`,false)) s.add(i); }); return s; }
 
-// ── Parse dataset ─────────────────────────────────────────────────────────────
 function parseDatasetRaw(id){
     const ds=dsById(id); if(!ds||!ds.rawRows.length) return null;
     const clippedSet=getChecked(`clipEnabled_${id}`,false)?getClippedSet(id):new Set();
@@ -2059,7 +1936,6 @@ function parseDatasetMs(id){
 }
 function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ if(!getChecked(`dsActive_${ds.id}`,true)) return []; const d=parseDatasetMs(ds.id); return d&&(d.ts.length||d.clipped.ts.length)?[{...d,dsIdx:idx,dsId:ds.id}]:[]; }); }
 
-// ── RV model ──────────────────────────────────────────────────────────────────
 function solveKepler(M,e,tol=1e-9){ let E=M; for(let i=0;i<100;i++){ const dE=(M-E+e*Math.sin(E))/(1-e*Math.cos(E)); E+=dE; if(Math.abs(dE)<tol) break; } return E; }
 function keplerianRV(t,P,K,e,omega,t0){
     if(K===0||P<=0) return 0;
@@ -2077,7 +1953,6 @@ function rvModelP(t,p,dsIdx=0){
     return rv;
 }
 
-// ── Param vector ──────────────────────────────────────────────────────────────
 function nPlanetParams(){ return planets.length*5; }
 function gammaOffset(){ return nPlanetParams(); }
 function jitterOffset(){ return nPlanetParams()+datasets.length; }
@@ -2146,7 +2021,6 @@ function negLogLikeHessian(full,flags,freeScales,dd){
     return H;
 }
 
-// ── getFreeFlags: reads from planet objects ───────────────────────────────────
 function getFreeFlags(){
     const f=[];
     planets.forEach(pl=>{
@@ -2170,7 +2044,6 @@ function clampFull(p){
     return q;
 }
 
-// ── getFullParamVector: reads from planet objects ─────────────────────────────
 function getFullParamVector(){
     if(_planetView==='table') planets.forEach(pl=>syncTableToDOM(pl.pid));
     const p=[];
@@ -2180,7 +2053,6 @@ function getFullParamVector(){
     return p;
 }
 
-// ── setFullParamVector: updates planet objects + all DOM ──────────────────────
 function setFullParamVector(p){
     const KU=getKUnit();
     planets.forEach((pl,i)=>{
@@ -2209,7 +2081,6 @@ function paramScales(p,dd,rvStd){
 }
 function fixKSign(p){ const q=[...p]; let flipped=false; planets.forEach((_,i)=>{ if(q[i*5+1]<0){ q[i*5+1]=-q[i*5+1]; q[i*5+3]=(q[i*5+3]+Math.PI+2*Math.PI)%(2*Math.PI); flipped=true; } }); return{p:q,flipped}; }
 
-// ── Solvers ───────────────────────────────────────────────────────────────────
 function levenbergMarquardt(initFull,dd,{maxIter=200,tol=1e-8,lambda0=1e-3,lambdaUp=10,lambdaDn=0.1}={}){
     const flags=getFreeFlags(),rvStd=rvStdFromData(dd);
     const{scales}=paramScales(initFull,dd,rvStd),freeScales=scales.filter((_,j)=>flags[j]);
@@ -2294,7 +2165,6 @@ function solveLinear(A,b){
 }
 function runFit(initFull,dd,algo){ const MAX_ITER=3; let p=initFull; for(let iter=0;iter<MAX_ITER;iter++){ const raw=algo==='lm'?levenbergMarquardt(p,dd):algo==='nelder-mead'?nelderMead(p,dd):diffEvol(p,dd); const{p:fixed,flipped}=fixKSign(raw); p=fixed; if(!flipped) break; } return p; }
 
-// ── Error estimation ──────────────────────────────────────────────────────────
 function estimateErrors(bestFull,dd){
     const flags=getFreeFlags(),nFull=bestFull.length;
     const residuals=dd.flatMap(({ts,rvs,dsIdx})=>ts.map((t,i)=>rvs[i]-rvModelP(t,bestFull,dsIdx)));
@@ -2343,7 +2213,6 @@ function clearErrors(){
     if(_planetView==='table') planets.forEach(pl=>{ ['P','K','e','omega','t0'].forEach(k=>{ const s=el(`ptSig_${k}_${pl.pid}`); if(s) s.textContent=''; }); });
 }
 
-// ── Fit stats ─────────────────────────────────────────────────────────────────
 function computeFitStats(p,dd){
     const nTot=getFreeFlags().filter(Boolean).length;
     let chi2=0,wsum=0,rss=0,n=0; const perDs={};
@@ -2369,7 +2238,6 @@ function displayFitStats(p,dd){
     return{rms,wrms,chi2,chi2red};
 }
 
-// ── Derived ───────────────────────────────────────────────────────────────────
 function massFunctionSI(K,P,e){ return P*K**3*(1-e*e)**1.5/(2*Math.PI*G); }
 function solveMsiniFixpoint(fval,Mstar,maxIter=300,tol=1e-12){ let x=Math.cbrt(fval); for(let i=0;i<maxIter;i++){ const xn=Math.cbrt(fval*(Mstar+x)**2); if(Math.abs((xn-x)/(xn+1e-30))<tol){x=xn;break;} x=xn; } return x; }
 function semiMajorAxisSini(K,P,e){ return K*P*Math.sqrt(1-e*e)/(2*Math.PI)/AU; }
@@ -2405,7 +2273,6 @@ function updateDerived(){
     if(_planetView==='table') updateTableDerived();
 }
 
-// ── Auto guess ────────────────────────────────────────────────────────────────
 function autoGuess(){
     const dd=buildDatasetsData(); if(!dd.length){ showMsg('Need data.',false); return; }
     const tArr=dd.flatMap(d=>d.ts),rvArr=dd.flatMap(d=>d.rvs);
@@ -2425,7 +2292,6 @@ function undoFit(){ if(!undoSnapshot){ showMsg('Nothing to undo.',false); return
 function resetCallCount(){ rvModelCallCount=0; el('rvModelCallCount').textContent='0'; }
 function timeColor(t,mn,mx){ const f=mx>mn?(t-mn)/(mx-mn):0; return `rgb(${Math.round(f<.5?30+f*2*140:170+(f-.5)*2*85)},${Math.round(f<.5?20+f*2*200:220-(f-.5)*2*30)},${Math.round(f<.5?180-f*2*140:40-(f-.5)*2*10)})`; }
 
-// ── makeScatterTrace ──────────────────────────────────────────────────────────
 function makeScatterTrace(xD,yD,errsD,lineNums,name,marker,KU,opts={}){
     const hasErr=errsD.some(e=>e>0);
     const eY=hasErr?{type:'data',array:errsD.map(e=>e>0?e:null),visible:true,color:marker.color,thickness:1.5,width:2}:undefined;
@@ -2433,7 +2299,6 @@ function makeScatterTrace(xD,yD,errsD,lineNums,name,marker,KU,opts={}){
         customdata:lineNums,hovertemplate:`%{customdata}:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`,...opts};
 }
 
-// ── Build traces ──────────────────────────────────────────────────────────────
 function buildTraces(p,foldPid,P,slot){
     const trRV=[],trRes=[],dd=buildDatasetsData();
     const colorByTime=slot.colorByTime,showClipped=slot.showClipped;
@@ -2488,7 +2353,6 @@ function buildTraces(p,foldPid,P,slot){
     return{trRV,trRes};
 }
 
-// ── GLS builtin ───────────────────────────────────────────────────────────────
 function computeGLS_builtin(ts,rvs,errs,freqs){
     const n=ts.length,w0=errs.map(e=>e>0?1/(e*e):1),W=w0.reduce((a,b)=>a+b,0);
     const wi=w0.map(w=>w/W),ybar=mean(rvs),power=new Float64Array(freqs.length);
@@ -2503,7 +2367,6 @@ function computeGLS_builtin(ts,rvs,errs,freqs){
     return power;
 }
 
-// ── Fit ───────────────────────────────────────────────────────────────────────
 function doFit(){
     const dd=buildDatasetsData(),nFree=getFreeFlags().filter(Boolean).length;
     if(!dd.length||dd.reduce((s,d)=>s+d.ts.length,0)<=nFree){ showMsg('Not enough data.',false); return; }
@@ -2551,7 +2414,6 @@ function doFit(){
     },50);
 }
 
-// ── Project JSON ──────────────────────────────────────────────────────────────
 function buildProjectJSON(){
     const KU=getKUnit();
     const planetsData=planets.map(pl=>({pid:pl.pid,name:pl.name,P:pl.P,K_ms:pl.K_ms,e:pl.e,omega_deg:pl.omega_deg,t0:pl.t0,fitP:pl.fitP,fitK:pl.fitK,fitE:pl.fitE,fitOmega:pl.fitOmega,fitT0:pl.fitT0,active:pl.active,glsSubtract:pl.glsSubtract??true,color:pl.color}));
@@ -2644,7 +2506,6 @@ function loadProjectFromObj(proj){
     setTimeout(()=>updateAllPanels(),350);
 }
 
-// ── File / URL / Sample / Clear ───────────────────────────────────────────────
 function loadFile(event,id){ const file=event.target.files[0]; if(!file) return; const r=new FileReader(); r.onload=e=>{ dsById(id).editor.setValue(e.target.result); rebuildClipTable(id); if(id===datasets[0]?.id) propagateUnitFromDs0(); showMsg(`✅ Loaded: ${file.name}`,true); }; r.readAsText(file); event.target.value=''; }
 async function loadFromURL(id){
     const url=el(`urlInput_${id}`).value.trim(); if(!url){ showMsg('Please enter a URL.',false); return; }
@@ -2673,7 +2534,6 @@ function loadSample(id){
 function clearDataset(id){ dsById(id).editor.setValue(''); dsById(id).rawRows=[]; el(`clipTbody_${id}`).innerHTML=''; el(`statsBar_${id}`).style.display='none'; updateAllPanels(); }
 function showMsg(msg,ok){ const e=el('statusMsg'); e.textContent=msg; e.className=ok?'msg-ok':'msg-err'; }
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
 function toggleSidebar(forceOn){
     const on=forceOn!==undefined?forceOn:!document.body.classList.contains('sidebar-mode');
     updateScrollbarWidth();
@@ -2684,7 +2544,6 @@ function toggleSidebar(forceOn){
     setTimeout(()=>resizeAllPlots(),300);
 }
 
-// ── Static event wiring ───────────────────────────────────────────────────────
 function initStaticEvents(){
     el('btnNew').addEventListener('click',newProject);
     el('btnSave').addEventListener('click',()=>saveProject(false));
@@ -2726,14 +2585,9 @@ function initStaticEvents(){
     initSidebarResize();
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
 window.onload=()=>{
     updateScrollbarWidth();
     initStaticEvents();
-    // Default layout is sidebar mode — already set via body.sidebar-mode in the
-    // static HTML, so #paramPanel renders correctly (position:fixed) from the
-    // very first paint, before any JS/CDN scripts have even loaded. Avoids the
-    // "normal layout" flash that occurred when this was only applied in JS.
     const restored=restoreFromSession();
     if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); }
     setPlanetView(_planetView);
