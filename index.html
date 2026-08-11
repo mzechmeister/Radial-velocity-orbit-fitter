@@ -135,6 +135,7 @@
         .ds-preview-table { width:100%; border-collapse:collapse; font-family:monospace; font-size:12px; white-space:nowrap; }
         .ds-preview-table th { position:sticky; top:0; background:var(--cm-bg); color:var(--accent); font-weight:normal; text-align:right; padding:2px 8px 4px 8px; border-bottom:1px solid var(--border); vertical-align:baseline; cursor:pointer; }
         .ds-preview-table th::after { content:'▲'; display:inline-block; font-size:14px; opacity:.9; pointer-events:none; margin-left:6px; vertical-align:baseline; visibility:hidden; }
+        .ds-preview-table th.filler { width: 100%; }
         .ds-preview-table th.sorted-asc { background:var(--cm-bg)!important; color:var(--accent)!important; border-bottom:2px solid var(--accent)!important; }
         .ds-preview-table th.sorted-asc::after { content:'▲'; visibility:visible; }
         .ds-preview-table th.sorted-desc { background:var(--cm-bg)!important; color:var(--accent)!important; border-bottom:1px solid var(--accent)!important; }
@@ -1451,6 +1452,7 @@ headRow.appendChild(makeEl('th',{html:`date (UTC)`,class:sortKey==='iso'?'sorted
 headRow.appendChild(makeEl('th',{html:(bjd0?`<em>t</em> − ${bjd0}`:'time <em>t</em> [JD]'),class:sortKey==='tAdj'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'tAdj')}));
 headRow.appendChild(makeEl('th',{html:`RV [${KU}]`,class:sortKey==='rv'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'rv')}));
 if(hasErr) headRow.appendChild(makeEl('th',{html:`err [${KU}]`,class:sortKey==='err'?'sorted-'+(sortDir===1?'asc':'desc'):'',onclick:()=>sortPreview(id,'err')}));
+    headRow.appendChild(makeEl('th',{class:'filler'}));
     table.appendChild(makeEl('thead',{},[headRow]));
 
     const tbody=makeEl('tbody');
