@@ -767,7 +767,7 @@ function _glsHandleCurveClick(sid,period){
     updateAllPanels(); buildGLSOverlay(sid); return true;
 }
 
-function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set()}; }
+function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set(),orbitVisibility:opts.orbitVisibility??{}}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
     return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},_afterplotBound:false,_cache:null};
@@ -957,6 +957,15 @@ function updateGLSSlotTitle(slot){
 
 function updatePlotSlot(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
+    // Read current orbit visibility from existing plot before replottting
+    const eRV=el(`plotRV_${sid}`);
+    if(eRV&&eRV.data){
+        eRV.data.forEach((trace)=>{
+            if(trace.name&&(trace.name==='Orbit'||planets.some(p=>p.name===trace.name))){
+                slot.orbitVisibility[trace.name]=trace.visible;
+            }
+        });
+    }
     const p=getFullParamVector();
     const foldPlIdx=slot.foldPid!==null?planetIndex(slot.foldPid):-1;
     const P=foldPlIdx>=0?p[foldPlIdx*5]:0;
@@ -2316,8 +2325,8 @@ function buildTraces(p,foldPid,P,slot){
     if(activePlanets.length>0){
         const xC=Array.from({length:600},(_,i)=>fold?i/600*P:xMn+(xMx-xMn)*i/600);
         const xCplot=showDate&&!fold?xC.map(t=>jdToIso(t+bjd0)):xC;
-        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2}}); }
-        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:'legendonly',line:{color:col,width:1.5,dash:'dot'}}); }); } }
+        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2},visible:orbitVisible}); }
+        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; const orbitVisible=slot.orbitVisibility['Orbit']??true; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2},visible:orbitVisible}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); const planetVisible=slot.orbitVisibility[pl.name]??'legendonly'; trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:planetVisible,line:{color:col,width:1.5,dash:'dot'}}); }); } }
     }
     const tMinG=Math.min(...allTsRaw),tMaxG=Math.max(...allTsRaw);
     const pOrbitRef=[...p]; pOrbitRef[gammaOffset()]=gamRef;
@@ -2430,7 +2439,7 @@ function buildProjectJSON(){
         clipEnabled:getChecked(`clipEnabled_${ds.id}`,false),
     }));
     const panelsData=panels.map(p=>{
-        if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle};
+        if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle,orbitVisibility:p.orbitVisibility||{}};
         return{type:'gls',pMin:p.pMin,pMax:p.pMax,ofac:p.ofac,xAxis:p.xAxis,showPeriod:p.showPeriod,useExt:p.useExt,glsSubtract:p.glsSubtract||{}};
     });
     return{version:25,projectName:getProjectName(),KUnit:KU,planets:planetsData,
@@ -2500,7 +2509,10 @@ function loadProjectFromObj(proj){
             (saved.clipped||[]).forEach((cl,i)=>{ if(cl){ const cb=el(`clip_${ds.id}_${i}`); if(cb){ cb.checked=true; el(`clipRow_${ds.id}_${i}`)?.classList.add('clipped'); } } });
         },100);
     });
-    (o.panels||[{type:'plot'},{type:'gls'}]).forEach(pd=>addPanel(pd.type,pd));
+    (o.panels||[{type:'plot'},{type:'gls'}]).forEach(pd=>{
+        const opts=pd.type==='plot'?{orbitVisibility:pd.orbitVisibility||{}}:{};
+        addPanel(pd.type,Object.assign(pd,opts));
+    });
     if(o.sidebarMode===false) toggleSidebar(false);
     if(o.gammaRefSrc!=null) setTimeout(()=>{ const sel=el('gammaRefSrc'); const valid=[...sel.options].map(op=>op.value); sel.value=valid.includes(String(o.gammaRefSrc))?String(o.gammaRefSrc):'custom'; setNumVal('gammaRefVal',o.gammaRefVal||0,4); onGammaRefSrcChange(); },300);
     setTimeout(()=>updateAllPanels(),350);
