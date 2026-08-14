@@ -2327,7 +2327,7 @@ function buildTraces(p,foldPid,P,slot){
     if(activePlanets.length>0){
         const xC=Array.from({length:600},(_,i)=>fold?i/600*P:xMn+(xMx-xMn)*i/600);
         const xCplot=showDate&&!fold?xC.map(t=>jdToIso(t+bjd0)):xC;
-        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2},visible:orbitVisible}); }
+        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; const orbitVisible=slot.orbitVisibility['Orbit']??true; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2},visible:orbitVisible}); }
         else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; const orbitVisible=slot.orbitVisibility['Orbit']??true; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2},visible:orbitVisible}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); const planetVisible=slot.orbitVisibility[pl.name]??'legendonly'; trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:planetVisible,line:{color:col,width:1.5,dash:'dot'}}); }); } }
     }
     const tMinG=Math.min(...allTsRaw),tMaxG=Math.max(...allTsRaw);
