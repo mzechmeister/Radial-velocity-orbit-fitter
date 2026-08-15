@@ -1028,7 +1028,9 @@ function computeGLSData(sid){
         freqs=Array.from({length:nFreq},(_,i)=>fMin+(fMax-fMin)*i/(nFreq-1));
         periods=freqs.map(f=>1/f); power=Array.from(computeGLS_builtin(allTs,allRVs,allErrs,freqs));
     }
-    slot._cache={periods,power,freqs,useExt,pMin,pMax};
+    let peakIdx=0,peakPow=0;
+    for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
+    slot._cache={periods,power,freqs,useExt,pMin,pMax,peakIdx};
 }
 
 function renderGLSSlot(sid){
@@ -1043,24 +1045,25 @@ function renderGLSSlot(sid){
         Plotly.react(plotDiv,[],{...base,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
         el(`glsPeakInfo_${sid}`).textContent='No data.'; _registerGLSListeners(sid); return;
     }
-    const{periods,power,freqs,useExt,pMin,pMax}=slot._cache;
+    const{periods,power,freqs,useExt,pMin,pMax,peakIdx}=slot._cache;
     const fMin=1/pMax,fMax=1/pMin;
-    let peakIdx=0,peakPow=0;
-    for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
-    const peakPeriod=periods[peakIdx],peakFreq=freqs[peakIdx],peakX=xFreq?peakFreq:peakPeriod;
+    const peakPeriod=peakIdx!=null?periods[peakIdx]:null,peakPow=peakIdx!=null?power[peakIdx]:0,peakFreq=peakIdx!=null?freqs[peakIdx]:null;
+    const peakX=peakPeriod!=null?(xFreq?peakFreq:peakPeriod):null;
     const xData=xFreq?freqs:periods,xL=xFreq?fMax:pMin,xR=xFreq?fMin:pMax;
     const pkCol=peakMarkerColor();
-    const peakLabel=xFreq?`Peak  <i>f</i> = ${peakFreq.toFixed(5)} d⁻¹`:`Peak  <i>P</i> = ${peakPeriod.toFixed(4)} d`;
+    const peakLabel=peakPeriod!=null?(xFreq?`Peak  <i>f</i> = ${peakFreq.toFixed(5)} d⁻¹`:`Peak  <i>P</i> = ${peakPeriod.toFixed(4)} d`):'';
     const fapLevels=[0.1,0.01,0.001],fapColors=['#ffbe0b','#f72585','#a0ff78'];
     const traces=[{x:xData,y:power,mode:'lines',type:'scatter',name:useExt?'GLS (mzechmeister)':'GLS Power',line:{color:'#4cc9f0',width:1.5}}];
     fapLevels.forEach((fap,i)=>{ const pw=1-Math.pow(1-fap,1/power.length); traces.push({x:[xL,xR],y:[pw,pw],mode:'lines',type:'scatter',name:`FAP ${(fap*100).toFixed(1)}%`,line:{color:fapColors[i],width:1,dash:'dot'}}); });
-    traces.push({x:[peakX],y:[peakPow],mode:'markers',type:'scatter',name:peakLabel,marker:{symbol:'circle-open',size:16,color:pkCol,line:{color:pkCol,width:2.5}},hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`});
+    if(peakX!=null){
+        traces.push({x:[peakX],y:[peakPow],mode:'markers',type:'scatter',name:peakLabel,marker:{symbol:'circle-open',size:16,color:pkCol,line:{color:pkCol,width:2.5}},hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`});
+    }
     Plotly.react(plotDiv,traces,{...base,margin:{l:65,r:20,t:15,b:50},
         xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},
         yaxis:{...axBase,tickformat:'~r',title:'GLS Power',range:[0,Math.min(1,peakPow*1.2)]},
         legend:{x:.99,y:.99,xanchor:'right',yanchor:'top',bgcolor:C.legendBg,bordercolor:C.grid,borderwidth:1}},
         {responsive:true,displayModeBar:'hover'});
-    el(`glsPeakInfo_${sid}`).textContent=xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`;
+    el(`glsPeakInfo_${sid}`).textContent=peakPeriod!=null?(xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`):'No peak found.';
     _registerGLSListeners(sid);
 }
 
@@ -1368,8 +1371,12 @@ function addPlanet(opts={}){
     const bjd0=getGlobalBJD0();
     const allTs=datasets.flatMap(ds=>(ds.rawRows||[]).map(r=>r.t+getDsT0Ref(ds)-bjd0));
     const tMean=allTs.length?mean(allTs):0,tSpan=allTs.length>=2?Math.max(...allTs)-Math.min(...allTs):10;
-    const pl={pid,name:opts.name??defaultPlanetName(i),P:opts.P??Math.max(tSpan/2,1),
-        K_ms:opts.K_ms??toMs(opts.K??1,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0:opts.t0??tMean,
+    const glsSlots=panels.filter(p => p.type==='gls' && p._cache?.peakIdx!=null);
+    const glsSlot=glsSlots.length ? glsSlots[glsSlots.length-1] : null;
+    const glsPeriod=glsSlot?._cache?.periods?.[glsSlot._cache.peakIdx];
+
+    const pl={pid,name:opts.name??defaultPlanetName(i),P: opts.P ?? glsPeriod ?? Math.max(tSpan/4, 5),
+        K_ms:opts.K_ms??toMs(opts.K??1,KU),e:opts.e??0,omega_deg:opts.omega_deg??0,t0: opts.t0 ?? (glsPeriod ? wrapTo(tMean, glsPeriod) : tMean),
         fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
         fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
         active:opts.active??true,glsSubtract:opts.glsSubtract??true,color:col};
