@@ -2073,8 +2073,10 @@ function setFullParamVector(p){
     });
     const gStart=gammaOffset(),jStart=jitterOffset();
     datasets.forEach((ds,idx)=>{
-        setNumVal(`pGamma_${ds.id}`,fromMs(p[gStart+idx]||0,getKUnit()),4);
-        const jit=Math.sqrt(Math.max(0,p[jStart+idx]||0));
+        ds.gamma=p[gStart+idx]||0;
+        setNumVal(`pGamma_${ds.id}`,fromMs(ds.gamma,getKUnit()),4);
+        ds.jitterMsSq=Math.max(0,p[jStart+idx]||0);
+        const jit=Math.sqrt(ds.jitterMsSq);
         setNumVal(`pJitter_${ds.id}`,fromMs(jit,getKUnit()),4);
     });
     rebuildGammaRefSelector();
