@@ -196,7 +196,7 @@
         .fit-table th { text-align:right; padding:2px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:11px; }
         .fit-table th:first-child { text-align:left; }
         .fit-table td { text-align:right; padding:2px 6px; color:var(--cyan); font-family:monospace; }
-        .fit-table td:first-child { text-align:left; color:var(--text2); font-family:Arial,sans-serif; }
+        .fit-table td:first-child { text-align:left; color:var(--row-col); font-family:Arial,sans-serif; }
         .fit-table tr.total-row td { color:var(--val2); border-top:1px solid var(--border); font-weight:bold; }
         .fit-table tr:hover td { background:var(--bg2); }
 
@@ -225,8 +225,7 @@
         .inst-table th { text-align:right; padding:2px 6px 4px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:12px; }
         .inst-table th:first-child,.inst-table td:first-child { text-align:left; }
         .inst-table td { padding:3px 6px; text-align:right; vertical-align:middle; }
-        .inst-table td:first-child { border-left:3px solid var(--row-col,transparent); }
-        .inst-table td.inst-name { color:var(--text2); font-weight:bold; white-space:nowrap; }
+        .inst-table td.inst-name { color:var(--row-col); font-weight:bold; white-space:nowrap; }
         .inst-table input[type=number] { width:90px; padding:4px 5px; text-align:right; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         .inst-table input[type=number]:focus { outline:none; border-color:var(--accent2); }
         .inst-table input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent2); cursor:pointer; }
@@ -1874,8 +1873,7 @@ function rebuildGammaUI(){
 }
 function makeInstRow(ds,idx,KU,savedG,savedJ){
     const col=getDsColor(ds,idx),isActive=getChecked(`dsActive_${ds.id}`,true);
-    const tr=makeEl('tr',{class:isActive?'':'inactive',style:{'--row-col':col}});
-    tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name,style:{color:col}}));
+    const tr=makeEl('tr',{class:isActive?'':'inactive'}); tr.style.setProperty('--row-col',col); tr.appendChild(makeEl('td',{class:'inst-name',text:ds.name}));
     const gInp=makeEl('input',{type:'number',id:`pGamma_${ds.id}`,value:savedG.toFixed(4),step:'1'});
     gInp.disabled=!isActive;
     gInp.addEventListener('change',updateAllPanels); gInp.addEventListener('keydown',e=>{ if(e.key==='Enter') doFit(); });
@@ -2242,7 +2240,7 @@ function displayFitStats(p,dd){
     const table=makeEl('table',{class:'fit-table'});
     const thead=makeEl('thead'); thead.innerHTML=`<tr><th></th><th>RMS</th><th>wRMS</th><th>χ²</th><th>χ²<sub>red</sub></th></tr>`;
     table.appendChild(thead); const tbody=makeEl('tbody');
-    if(dd.length>1){ dd.forEach(({dsIdx})=>{ const ds=datasets[dsIdx]; if(!ds) return; const col=getDsColor(ds,dsIdx),pd=perDs[dsIdx]; if(!pd) return; const rmsDs=fromMs(Math.sqrt(pd.rss/Math.max(pd.n,1)),KU),wrmsDs=fromMs(Math.sqrt(pd.chi2/Math.max(pd.wsum,1e-100)),KU); const nParamsDs=Math.round(nTot*pd.n/Math.max(dd.reduce((s,d)=>s+d.ts.length,0),1)),dofDs=Math.max(pd.n-nParamsDs,1); const tr=makeEl('tr'); tr.innerHTML=`<td><span style="color:${col};">▪</span> ${ds.name}</td><td>${fmtSig3(rmsDs)}</td><td>${fmtSig3(wrmsDs)}</td><td>${pd.chi2.toFixed(1)}</td><td>${(pd.chi2/dofDs).toFixed(3)}</td>`; tbody.appendChild(tr); }); }
+    if(dd.length>1){ dd.forEach(({dsIdx})=>{ const ds=datasets[dsIdx]; if(!ds) return; const col=getDsColor(ds,dsIdx),pd=perDs[dsIdx]; if(!pd) return; const rmsDs=fromMs(Math.sqrt(pd.rss/Math.max(pd.n,1)),KU),wrmsDs=fromMs(Math.sqrt(pd.chi2/Math.max(pd.wsum,1e-100)),KU); const nParamsDs=Math.round(nTot*pd.n/Math.max(dd.reduce((s,d)=>s+d.ts.length,0),1)),dofDs=Math.max(pd.n-nParamsDs,1); const tr=makeEl('tr'); tr.style.setProperty('--row-col',col); tr.innerHTML=`<td>${ds.name}</td><td>${fmtSig3(rmsDs)}</td><td>${fmtSig3(wrmsDs)}</td><td>${pd.chi2.toFixed(1)}</td><td>${(pd.chi2/dofDs).toFixed(3)}</td>`; tbody.appendChild(tr); }); }
     const trTot=makeEl('tr',{class:'total-row'});
     trTot.innerHTML=`<td>${dd.length>1?'all':datasets[dd[0]?.dsIdx]?.name||'all'}</td><td>${fmtSig3(fromMs(rms,KU))} ${KU}</td><td>${fmtSig3(fromMs(wrms,KU))} ${KU}</td><td>${chi2.toFixed(1)}</td><td>${chi2red.toFixed(3)} (${dof})</td>`;
     tbody.appendChild(trTot); table.appendChild(tbody); container.appendChild(table);
