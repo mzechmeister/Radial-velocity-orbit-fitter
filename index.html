@@ -688,7 +688,8 @@ function buildGLSOverlay(sid){
     if(!slot.showPeriod){ svg.style.display='none'; return; }
     svg.style.display='';
     const L=glsLayoutOf(sid); if(!L) return;
-    const pMin=slot.pMin||1,pMax=slot.pMax||1000,yTop=glsYTop(sid),yH=glsYH(sid);
+    const pMin=slot.pMin||1;
+    const pMax=slot.pMax??slot._cache?.pMax??5000,yTop=glsYTop(sid),yH=glsYH(sid);
     if(!glsLineStates[sid]) glsLineStates[sid]={};
     planets.filter(pl=>pl.active!==false).forEach(pl=>{
         const fitP=pl.P; if(fitP<pMin||fitP>pMax) return;
