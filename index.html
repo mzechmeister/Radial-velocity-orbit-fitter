@@ -542,7 +542,7 @@ function makeEl(tag,props={},children=[]){
 function mean(arr){ if(!arr.length) return 0; return arr.reduce((a,b)=>a+b,0)/arr.length; }
 function std(arr){ if(!arr.length) return 0; const m=mean(arr); return Math.sqrt(arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length); }
 function median(arr){ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b),m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; }
-function wrapDeg(v){ return ((v%360)+360)%360; }
+function wrapTo(v,range){ return ((v%range)+range)%range; }
 
 function sigDec(v){ if(!isFinite(v)||v===0) return 2; return Math.max(0,2-Math.floor(Math.log10(Math.abs(v)))); }
 function fmtSig3(v){ if(!isFinite(v)) return '—'; return v.toFixed(sigDec(v)); }
@@ -1949,7 +1949,7 @@ function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ if(!getChecked
 function solveKepler(M,e,tol=1e-9){ let E=M; for(let i=0;i<100;i++){ const dE=(M-E+e*Math.sin(E))/(1-e*Math.cos(E)); E+=dE; if(Math.abs(dE)<tol) break; } return E; }
 function keplerianRV(t,P,K,e,omega,t0){
     if(K===0||P<=0) return 0;
-    const M=((2*Math.PI*(t-t0)/P)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+    const M=wrapTo(2*Math.PI*(t-t0)/P,2*Math.PI);
     const E=solveKepler(M,e);
     const nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));
     return K*(Math.cos(nu+omega)+e*Math.cos(omega));
@@ -2068,7 +2068,7 @@ function setFullParamVector(p){
     planets.forEach((pl,i)=>{
         const b=i*5;
         pl.P=p[b]; pl.K_ms=p[b+1]; pl.e=p[b+2];
-        pl.omega_deg=wrapDeg(p[b+3]*180/Math.PI); pl.t0=p[b+4];
+        pl.omega_deg=wrapTo(p[b+3]*180/Math.PI,360); pl.t0=wrapTo(p[b+4],pl.P);
         syncPlanetToDOM(pl);
     });
     const gStart=gammaOffset(),jStart=jitterOffset();
@@ -2339,7 +2339,7 @@ function buildTraces(p,foldPid,P,slot){
         const ds=datasets[dsIdx],gammaDsMs=p[gammaOffset()+dsIdx]||0,shift=gamRef-gammaDsMs;
         const col=getDsColor(ds,dsIdx),sym=getDsSymbol(ds),opacity=getDsOpacity(ds),sz=getDsSize(ds);
         const dsVisible=slot.hiddenDatasets?.has(ds.id)?'legendonly':true;
-        const xD=showDate&&!fold?ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?ts.map(t=>((t%P)+P)%P):ts.slice();
+        const xD=showDate&&!fold?ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?ts.map(t=>wrapTo(t,P)):ts.slice();
         const subtractOtherPlanets=(tsArr,vsArr)=>vsArr.map((v,i)=>{ let rv=v+shift; if(fold) planets.forEach((pl2,pi)=>{ if(pl2.active===false||pl2.pid===foldPid) return; rv-=fromMs(keplerianRV(tsArr[i],p[pi*5],p[pi*5+1],p[pi*5+2],p[pi*5+3],p[pi*5+4]),plotUnit); }); return fromMs(rv,plotUnit); });
         const rvsD=subtractOtherPlanets(ts,rvs),errsD=errs.map(e=>fromMs(e,plotUnit));
         const orb=ts.map(t=>fromMs(fold?rvModelP(t,pFoldRef,0):rvModelP(t,pOrbitRef,0),plotUnit));
