@@ -337,6 +337,10 @@
         .ds-summary-table .quality-bar { font-family:monospace; white-space:nowrap; }
         .ds-summary-footer { margin-top:8px; padding:8px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
         .ds-summary-table tr.total-row td { border-top:2px solid var(--border); font-weight:bold; }
+        .ds-summary-table td:first-child {
+            color: var(--row-col);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body data-theme="dark" class="sidebar-mode">
@@ -1703,10 +1707,10 @@ function renderAllDatasetsSummary(){
     const thead=makeEl('thead');
     thead.innerHTML=`
         <tr>
+            <th>Name</th>
             <th style="width:50px;">Status</th>
             <th style="width:40px;">🎨</th>
             <th style="width:50px;">sym</th>
-            <th>Name</th>
             <th style="width:90px;">N (clip)</th>
             <th style="width:90px;">Span [d]</th>
             <th style="width:100px;">σ(RV) [m/s]</th>
@@ -1739,6 +1743,11 @@ function renderAllDatasetsSummary(){
         if(n>0){ weightedSigmaSum+=sigma*n; weightedSigmaCount+=n; }
 
         const tr=makeEl('tr',{style:{opacity:isActive?'1':'0.5'}});
+        tr.style.setProperty('--row-col',ds.color);
+
+        const nameCell=makeEl('td',{text:ds.name,style:{cursor:'pointer','color':'var(--row-col)'}});
+        nameCell.addEventListener('click',()=>switchTab(ds.id));
+        tr.appendChild(nameCell);
 
         const statusCell=makeEl('td',{style:{textAlign:'center'}});
         const statusCb=makeEl('input',{type:'checkbox',title:'Include dataset in fit/plots',style:{width:'14px',height:'14px',accentColor:ds.color,cursor:'pointer'}});
@@ -1783,10 +1792,6 @@ function renderAllDatasetsSummary(){
         });
         symCell.appendChild(symSelect);
         tr.appendChild(symCell);
-
-        const nameCell=makeEl('td',{text:ds.name,style:{cursor:'pointer',color:ds.color}});
-        nameCell.addEventListener('click',()=>switchTab(ds.id));
-        tr.appendChild(nameCell);
 
         tr.appendChild(makeEl('td',{text:`${n} (${nClip})`}));
         tr.appendChild(makeEl('td',{text:span.toFixed(1)}));
