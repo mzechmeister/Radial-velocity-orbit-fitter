@@ -1105,12 +1105,14 @@ function updateAllPanels(){
     datasets.forEach(ds=>updateStatsBar(ds.id));
     el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
     panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else updateGLSSlot(p.sid); });
+    renderAllDatasetsSummary();
 }
 
 function updateAllPanelsLight(){
     datasets.forEach(ds=>updateStatsBar(ds.id));
     el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
     panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else renderGLSSlot(p.sid); });
+    renderAllDatasetsSummary();
 }
 
 function newProject(){
