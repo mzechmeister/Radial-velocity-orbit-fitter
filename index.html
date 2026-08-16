@@ -341,6 +341,7 @@
             color: var(--row-col);
             font-weight: bold;
         }
+        .ds-summary-table select.ds-sym-select{font-size:14px;padding:2px 4px;border-radius:4px;}
     </style>
 </head>
 <body data-theme="dark" class="sidebar-mode">
@@ -1778,7 +1779,7 @@ function renderAllDatasetsSummary(){
         tr.appendChild(colorCell);
 
         const symCell=makeEl('td',{style:{textAlign:'center'}});
-        const symSelect=makeEl('select',{style:{fontSize:'14px',padding:'2px 4px',background:'var(--input-bg)',color:'var(--text)',border:'1px solid var(--border)',borderRadius:'4px',width:'auto',minWidth:'0'}});
+        const symSelect=makeEl('select',{class:'ds-sym-select'});
         SYMBOLS.forEach((s,i)=>{
             const opt=makeEl('option',{value:s,text:SYMBOLS_UNICODE[i]});
             if(s===sym) opt.selected=true;
