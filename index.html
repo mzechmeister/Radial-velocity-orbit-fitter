@@ -122,6 +122,7 @@
         .ds-header input[type=number]:focus { outline:none; border-color:var(--accent2); }
         .ds-header select { padding:2px 4px; font-size:12px; background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:4px; width:auto; min-width:0; }
         .ds-header input[type=range] { width:70px; accent-color:var(--accent2); }
+        .ds-header input[type=checkbox]{accent-color:var(--row-col);}
         .data-stats-bar { margin-top:6px; padding:6px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; font-size:12px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
         .stat-item { display:flex; gap:5px; } .stat-label { color:var(--accent); } .stat-val { color:var(--cyan); }
         .view-toggle { display:flex; align-items:center; gap:0; margin-bottom:4px; }
@@ -159,7 +160,7 @@
         .CodeMirror-linenumber { color:var(--cm-gutter-fg)!important; font-size:12px; }
         .CodeMirror-cursor { border-left-color:var(--cm-cursor)!important; }
         .CodeMirror textarea { caret-color:var(--cm-cursor)!important; }
-        .ds-editor-wrap { border-left:4px solid transparent; padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s,opacity .2s; }
+        .ds-editor-wrap { border-left:4px solid var(--row-col); padding-left:8px; margin-left:-2px; border-radius:4px; transition:border-color .2s,opacity .2s; }
         .ds-editor-wrap.inactive { opacity:.5; }
         input[type=number],input[type=text],select { background:var(--input-bg); color:var(--text); border:1px solid var(--border); border-radius:5px; }
         input[type=number]:focus,input[type=text]:focus,select:focus { outline:none; border-color:var(--accent2); }
@@ -341,6 +342,7 @@
             color: var(--row-col);
             font-weight: bold;
         }
+        .ds-summary-table input[type=checkbox]{accent-color:var(--row-col);}
         .ds-summary-table select.ds-sym-select{font-size:14px;padding:2px 4px;border-radius:4px;}
     </style>
 </head>
@@ -1520,9 +1522,10 @@ function addDataset(initialText='',initialName=null,opts={}){
     const opacity=opts.opacity!=null?opts.opacity:1.0,size=opts.size||8,t0ref=opts.t0ref||0;
     const dsActive=opts.active??true;
     const pane=makeEl('div',{class:'ds-pane',id:`pane_${id}`});
+    pane.style.setProperty('--row-col',col);
     pane.innerHTML=`
     <div class="ds-header" id="dsHeader_${id}">
-        <input type="checkbox" id="dsActive_${id}" title="Include dataset in fit/plots"${dsActive?' checked':''} style="width:14px;height:14px;accent-color:${col};cursor:pointer;flex:0 0 auto;margin-right:2px;">
+        <input type="checkbox" id="dsActive_${id}" title="Include dataset in fit/plots"${dsActive?' checked':''} style="width:14px;height:14px;cursor:pointer;flex:0 0 auto;margin-right:2px;">
         <input type="color" id="dsColor_${id}" value="${col}" title="Colour" style="width:26px;height:22px;padding:1px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:none;">
         <label>sym</label><select id="dsSymbol_${id}" title="Symbol" style="font-size:14px;width:auto;min-width:0;">${SYMBOLS.map((s,i)=>`<option value="${s}"${s===sym?' selected':''}>${SYMBOLS_UNICODE[i]}</option>`).join('')}</select>
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
@@ -1534,7 +1537,7 @@ function addDataset(initialText='',initialName=null,opts={}){
         <button id="btnRaw_${id}" class="active">Raw</button><button id="btnPrev_${id}">Preview</button>
         <label><input type="checkbox" id="clipEnabled_${id}" style="width:13px;height:13px;accent-color:#f72585;"> clip enabled</label>
     </div>
-    <div class="ds-editor-wrap" id="dsEditorWrap_${id}" style="border-left-color:${col};">
+    <div class="ds-editor-wrap" id="dsEditorWrap_${id}">
         <div id="cmWrap_${id}"><div id="cm_${id}"></div></div>
         <div class="ds-preview" id="preview_${id}" style="display:none;"></div>
     </div>
@@ -1593,8 +1596,9 @@ function onDsActiveToggle(id){
 function onDsStyleChange(id){
     const ds=dsById(id); if(!ds) return;
     const col=getDsColor(ds,dsIndex(id));
-    const ew=el(`dsEditorWrap_${id}`); if(ew) ew.style.borderLeftColor=col;
+    ds.color=col;
     const tab=el(`tab_${id}`); if(tab) tab.style.borderTop=`3px solid ${col}`;
+    const pane=el(`pane_${id}`); if(pane) pane.style.setProperty('--row-col',col);
     rebuildGammaUI(); updateAllPanelsLight();
     updateDataHeaderSummary();
 }
@@ -1753,7 +1757,7 @@ function renderAllDatasetsSummary(){
         tr.appendChild(nameCell);
 
         const statusCell=makeEl('td',{style:{textAlign:'center'}});
-        const statusCb=makeEl('input',{type:'checkbox',title:'Include dataset in fit/plots',style:{width:'14px',height:'14px',accentColor:ds.color,cursor:'pointer'}});
+        const statusCb=makeEl('input',{type:'checkbox',title:'Include dataset in fit/plots',style:{width:'14px',height:'14px',cursor:'pointer'}});
         statusCb.checked=isActive;
         statusCb.addEventListener('change',()=>{
             const cb=el(`dsActive_${ds.id}`);
