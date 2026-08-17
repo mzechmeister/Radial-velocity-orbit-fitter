@@ -76,6 +76,7 @@
         body.sidebar-mode #paramPanel { border-left:none; }
 
         #leftScroll { padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
+        #leftScroll::-webkit-scrollbar,#paramPanel::-webkit-scrollbar{width:var(--scrollbar-w);}
         body.sidebar-mode { overflow:hidden; height:100vh; }
         body.sidebar-mode #leftScroll { position:fixed; left:0; top:0; bottom:0; right:var(--sidebar-w); overflow-y:auto; padding: calc(var(--bar-h) + 12px) 20px 20px 20px; }
         body.sidebar-mode #paramPanel { position:fixed; right:0; top:var(--bar-h); bottom:0; width:var(--sidebar-w); overflow-y:scroll; border-radius:0; box-shadow:-4px 0 24px rgba(0,0,0,.35); z-index:200; margin-bottom:0; }
