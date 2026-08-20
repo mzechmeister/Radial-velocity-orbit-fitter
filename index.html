@@ -2273,7 +2273,7 @@ function displayFitStats(p,dd){
 
 function massFunctionSI(K,P,e){ return P*K**3*(1-e*e)**1.5/(2*Math.PI*G); }
 function solveMsiniFixpoint(fval,Mstar,maxIter=300,tol=1e-12){ let x=Math.cbrt(fval); for(let i=0;i<maxIter;i++){ const xn=Math.cbrt(fval*(Mstar+x)**2); if(Math.abs((xn-x)/(xn+1e-30))<tol){x=xn;break;} x=xn; } return x; }
-function semiMajorAxisSini(K,P,e){ return K*P*Math.sqrt(1-e*e)/(2*Math.PI)/AU; }
+function semiMajorAxisSini(K,P_days,e){ return K*P_days*DAY*Math.sqrt(1-e*e)/(2*Math.PI)/AU; }
 function msiniWithError(K,P_days,e,sigK,sigP_days,sigE,Mstar_kg,sigMstar_kg){
     if(K<=0||P_days<=0) return{msini:0,sigma:0};
     const P=P_days*DAY,e2=1-e*e,fval=massFunctionSI(K,P,e),m=solveMsiniFixpoint(fval,Mstar_kg);
