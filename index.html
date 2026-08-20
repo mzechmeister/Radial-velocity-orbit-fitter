@@ -330,9 +330,10 @@
         .global-unit-sel { font-size:12px; padding:2px 6px; border-radius:4px; background:var(--input-bg); color:var(--accent); border:1px solid var(--border); cursor:pointer; }
         .global-unit-sel:focus { outline:none; border-color:var(--accent2); }
 
-        .ds-summary-table { width:100%; border-collapse:collapse; font-size:12px; }
-        .ds-summary-table th { text-align:left; padding:6px 8px; color:var(--accent); font-weight:normal; border-bottom:2px solid var(--border); font-size:11px; }
-        .ds-summary-table td { padding:6px 8px; text-align:left; border-bottom:1px solid var(--border); }
+        .ds-summary-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;}
+        .ds-summary-table th{text-align:left;padding:2px 8px 4px 8px;color:var(--accent);font-weight:normal;border-bottom:2px solid var(--border);font-size:11px;white-space:nowrap;}
+        .ds-summary-table td{padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);}
+        .ds-summary-table th:last-child,.ds-summary-table td:last-child{width:100%;}
         .ds-summary-table tr:hover td { background:var(--bg3); }
         .ds-summary-table .ds-color-circle { width:18px; height:18px; border-radius:3px; cursor:pointer; border:1px solid var(--border); display:inline-block; }
         .ds-summary-table .ds-status { cursor:pointer; user-select:none; }
@@ -1716,14 +1717,14 @@ function renderAllDatasetsSummary(){
     thead.innerHTML=`
         <tr>
             <th>Name</th>
-            <th style="width:50px;">Status</th>
-            <th style="width:40px;">🎨</th>
-            <th style="width:50px;">sym</th>
-            <th style="width:90px;">N (clip)</th>
-            <th style="width:90px;">Span [d]</th>
-            <th style="width:100px;">σ(RV) [m/s]</th>
-            <th style="width:110px;">median err [m/s]</th>
-            <th style="width:110px;">Quality</th>
+            <th>Status</th>
+            <th>🎨</th>
+            <th>sym</th>
+            <th>N (clip)</th>
+            <th>Span [d]</th>
+            <th>σ(RV) [m/s]</th>
+            <th>median err [m/s]</th>
+            <th>Quality</th>
         </tr>
     `;
     table.appendChild(thead);
@@ -1827,8 +1828,8 @@ function renderAllDatasetsSummary(){
     totalTr.appendChild(makeEl('td',{text:`${totalN} (${totalClip})`}));
     totalTr.appendChild(makeEl('td',{text:totalSpan.toFixed(1)}));
     totalTr.appendChild(makeEl('td',{text:weightedSigma.toFixed(1)}));
-    totalTr.appendChild(makeEl('td',{text:'—'}));
-    totalTr.appendChild(makeEl('td',{text:'—'}));
+    totalTr.appendChild(makeEl('td',{text:''}));
+    totalTr.appendChild(makeEl('td',{text:''}));
     tbody.appendChild(totalTr);
 
     summaryPane.appendChild(table);
