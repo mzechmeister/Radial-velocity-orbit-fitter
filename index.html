@@ -210,8 +210,8 @@
         .planet-tab:not(.active) { background:var(--bg2); }
         .planet-tab.active { background:var(--bg3); font-weight:bold; border-bottom-color:var(--bg3); }
         .planet-tab.tab-drag-over { border-top:3px solid var(--accent2); background:var(--tab-active); }
-        #ptab_all { position:sticky; left:0; background:var(--bg2); z-index:2; }
-        #ptab_all.active { background:var(--bg3); }
+        #ptab_all { position:sticky; left:0; z-index:2; color:var(--text2); }
+        #ptab_all.active { color:var(--accent); }
         .planet-tab-add { padding:4px 10px; border-radius:6px 6px 0 0; border:1px solid var(--border); background:var(--bg2); color:var(--accent); cursor:pointer; font-size:16px; line-height:1; transition:background .15s; flex-shrink:0; position:sticky; right:0; z-index:2; }
         .planet-tab-add:hover { background:var(--bg3); }
         .planet-tab-content { border:1px solid var(--border); border-radius:0 6px 6px 6px; background:var(--bg3); padding:8px; }
@@ -1305,7 +1305,7 @@ function switchPlanetTab(pid){
     const showAll=pid==='all';
     planets.forEach(pl=>{ el(`planetBlock_${pl.pid}`)?.classList.toggle('active',showAll||pl.pid===pid); });
     const allTab=el('ptab_all');
-    if(allTab) allTab.style.color=(pid==='all')?'var(--accent)':'var(--text2)';
+    if(allTab) allTab.classList.toggle('active',pid==='all');
     planets.forEach(pl=>{
         const tab=el(`ptab_${pl.pid}`);
         if(tab){
