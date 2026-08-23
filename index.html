@@ -327,9 +327,9 @@
 
         .ds-summary-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;}
         .ds-summary-table th{text-align:left;padding:2px 8px 4px 8px;color:var(--accent);font-weight:normal;border-bottom:2px solid var(--border);font-size:11px;white-space:nowrap;}
-        .ds-summary-table td{padding:4px 8px;text-align:left;border-bottom:1px solid var(--border);}
+        .ds-summary-table td{padding:4px 8px;text-align:left;}
         .ds-summary-table th:last-child,.ds-summary-table td:last-child{width:100%;}
-        .ds-summary-table tr:hover td { background:var(--bg3); }
+        .ds-summary-table tr:not(.total-row):hover td { background:var(--bg3); }
         .ds-summary-table .ds-color-circle { width:18px; height:18px; border-radius:3px; cursor:pointer; border:1px solid var(--border); display:inline-block; }
         .ds-summary-table .ds-status { cursor:pointer; user-select:none; }
         .ds-summary-table .quality-bar { font-family:monospace; white-space:nowrap; }
@@ -1555,7 +1555,7 @@ function addDataset(initialText='',initialName=null,opts={}){
         <div class="ds-preview" id="preview_${id}" style="display:none;"></div>
     </div>
     <div class="data-stats-bar" id="statsBar_${id}" style="display:none;">
-        <div class="stat-item"><span class="stat-label"><em>n</em> =</span><span class="stat-val" id="statN_${id}">—</span></div>
+        <div class="stat-item"><span class="stat-label"><em>N</em> =</span><span class="stat-val" id="statN_${id}">—</span></div>
         <div class="stat-item"><span class="stat-label">span =</span><span class="stat-val" id="statSpan_${id}">—</span></div>
         <div class="stat-item"><span class="stat-label"><em>σ</em>(RV) =</span><span class="stat-val" id="statSigma_${id}">—</span></div>
         <div class="stat-item"><span class="stat-label">median err =</span><span class="stat-val" id="statMedErr_${id}">—</span></div>
@@ -1713,7 +1713,7 @@ function renderAllDatasetsSummary(){
             <th>Status</th>
             <th>🎨</th>
             <th>sym</th>
-            <th>N (clip)</th>
+            <th><em>N</em> (clip)</th>
             <th>Span [d]</th>
             <th>σ(RV) [m/s]</th>
             <th>median err [m/s]</th>
