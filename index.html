@@ -326,8 +326,17 @@
         .global-unit-sel:focus { outline:none; border-color:var(--accent2); }
 
         .ds-summary-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;}
-        .ds-summary-table th{text-align:left;padding:2px 8px 4px 8px;color:var(--accent);font-weight:normal;border-bottom:2px solid var(--border);font-size:11px;white-space:nowrap;}
-        .ds-summary-table td{padding:4px 8px;text-align:left;}
+        .ds-summary-table th{padding:2px 8px 4px 8px;color:var(--accent);font-weight:normal;border-bottom:2px solid var(--border);font-size:11px;white-space:nowrap;}
+        .ds-summary-table td{padding:4px 8px;white-space:nowrap;border-bottom:1px solid var(--border);}
+        .ds-summary-table td:nth-child(5),
+        .ds-summary-table td:nth-child(6),
+        .ds-summary-table td:nth-child(7),
+        .ds-summary-table td:nth-child(8) { text-align: right; }
+        .ds-summary-table tr.total-row td{border-bottom:none;}
+        .ds-summary-table tr.total-row td:nth-child(2),
+        .ds-summary-table tr.total-row td:nth-child(3),
+        .ds-summary-table tr.total-row td:nth-child(4),
+        .ds-summary-table tr.total-row td:nth-child(5) { text-align: right; }
         .ds-summary-table th:last-child,.ds-summary-table td:last-child{width:100%;}
         .ds-summary-table tr:not(.total-row):hover td { background:var(--bg3); }
         .ds-summary-table .ds-color-circle { width:18px; height:18px; border-radius:3px; cursor:pointer; border:1px solid var(--border); display:inline-block; }
@@ -1544,7 +1553,7 @@ function addDataset(initialText='',initialName=null,opts={}){
         <label>sz</label><input type="number" id="dsSize_${id}" value="${size}" min="2" max="20" step="1" title="Size" style="width:42px;">
         <label>α</label><input type="range" id="dsOpacity_${id}" min="0.05" max="1" step="0.05" value="${opacity}" title="Opacity">
         <label title="Added to file times"><em>t</em><sub>0,ref</sub> <input type="number" id="t0ref_${id}" value="${t0ref}" step="1"></label>
-        <label>unit raw <select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select></label>
+        <label>raw unit <select id="rvUnit_${id}"><option value="m/s"${rvUnit==='m/s'?' selected':''}>m/s</option><option value="km/s"${rvUnit==='km/s'?' selected':''}>km/s</option></select></label>
     </div>
     <div class="view-toggle">
         <button id="btnRaw_${id}" class="active">Raw</button><button id="btnPrev_${id}">Preview</button>
@@ -1562,8 +1571,9 @@ function addDataset(initialText='',initialName=null,opts={}){
         <div class="stat-item" id="statClipItem_${id}" style="display:none;"><span class="stat-label">clipped =</span><span class="stat-val" id="statClip_${id}">—</span></div>
     </div>
     <div style="display:none;"><table><tbody id="clipTbody_${id}"></tbody></table></div>
-    <div class="url-input"><input type="text" id="urlInput_${id}" placeholder="https://example.com/data.txt"><button class="btn-url" id="btnUrl_${id}">🌐 Load URL</button></div>
     <div class="btn-row">
+        <input type="text" id="urlInput_${id}" placeholder="https://example.com/data.txt" style="flex:1; min-width:120px; padding:4px 6px; font-size:13px;">
+        <button class="btn-url" id="btnUrl_${id}">🌐 Load URL</button>
         <button class="btn-load" id="btnLoad_${id}">📁 Load File</button>
         <input type="file" id="fileInput_${id}" accept=".txt,.csv,.dat" style="display:none;">
         <button class="btn-sample" id="btnSample_${id}">Sample</button>
