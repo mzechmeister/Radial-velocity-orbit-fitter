@@ -1668,7 +1668,8 @@ allTab.addEventListener('click',(e)=>{
         setupDatasetDrag(tab,ds.id); bar.appendChild(tab);
     });
     const addBtn=makeEl('button',{class:'ds-tab-add',title:'Add dataset',text:'+'});
-    addBtn.addEventListener('click',()=>addDataset()); bar.appendChild(addBtn);
+    addBtn.addEventListener('click',e=>{ e.stopPropagation(); addDataset(); });
+    bar.appendChild(addBtn);
 }
 
 function switchTab(id){
