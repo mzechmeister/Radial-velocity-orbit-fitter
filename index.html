@@ -362,6 +362,11 @@
 
         /* Dataset color variable */
         #dataHeader .ds-tab[id^="tab_"]:not(#tab_all) { color:var(--ds-tab-color); }
+        .btn-gls-run.current {
+            opacity: 0.5;
+            filter: grayscale(100%);
+            cursor: default;
+        }
     </style>
 </head>
 <body data-theme="dark" class="sidebar-mode">
@@ -794,7 +799,7 @@ function _glsHandleCurveClick(sid,period){
 function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set(),orbitVisibility:opts.orbitVisibility??{}}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
-    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},_afterplotBound:false,_cache:null};
+    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},autoUpdate:opts.autoUpdate??true,stale:opts.stale??true,_afterplotBound:false,_cache:null};
 }
 
 function addPanel(type,opts={}){
@@ -859,6 +864,14 @@ function _buildPlotBody(slot,body){
 function _buildGLSBody(slot,body){
     const sid=slot.sid;
     const optRow=makeEl('div',{class:'gls-slot-options'});
+    const autoBtn=makeEl('button',{class:'btn-view',id:`btnAutoGLS_${sid}`,html:'🔄 Auto',style:{fontSize:'12px',padding:'4px 10px',marginLeft:'8px'}});
+    autoBtn.classList.toggle('active',slot.autoUpdate!==false);
+    autoBtn.addEventListener('click',()=>{
+        slot.autoUpdate=!slot.autoUpdate;
+        autoBtn.classList.toggle('active',slot.autoUpdate);
+        if(!slot.autoUpdate) slot.stale=true;
+        updateGLSButtonState(sid);
+    });
     function numOpt(lbl,key,min,step){ optRow.appendChild(makeEl('label',{html:lbl})); const inp=makeEl('input',{type:'number',value:String(slot[key]),min:String(min),step:String(step)}); inp.addEventListener('change',()=>{ slot[key]=parseFloat(inp.value)||slot[key]; updateGLSSlot(sid); }); optRow.appendChild(inp); }
     numOpt('<em>P</em><sub>min</sub>','pMin',0.01,0.1);
     optRow.appendChild(makeEl('label',{html:'<em>P</em><sub>max</sub>'}));
@@ -879,7 +892,8 @@ function _buildGLSBody(slot,body){
     xSel.value=slot.xAxis; xSel.addEventListener('change',()=>{ slot.xAxis=xSel.value; renderGLSSlot(sid); }); optRow.appendChild(xSel);
     const computeBtn=makeEl('button',{class:'btn-gls-run',id:`glsComputeBtn_${sid}`});
     computeBtn.appendChild(makeEl('span',{text:'▶ Compute GLS'}));
-    computeBtn.addEventListener('click',()=>updateGLSSlot(sid)); optRow.appendChild(computeBtn);
+    computeBtn.addEventListener('click',()=>updateGLSSlot(sid)); optRow.appendChild(autoBtn);
+    optRow.appendChild(computeBtn);
     body.appendChild(optRow);
     body.appendChild(makeEl('div',{class:'gls-subtract-row',id:`glsSubRow_${sid}`}));
     const wrap=makeEl('div',{class:'gls-plot-wrapper'});
@@ -1094,9 +1108,16 @@ function updateGLSSlot(sid){
     const start=performance.now();
     setTimeout(()=>{
         try{ computeGLSData(sid); renderGLSSlot(sid); }
+        catch(e){ console.error('GLS error:', e); }
         finally{
+            const slot=panels.find(p=>p.sid===sid&&p.type==='gls');
+            if(slot) slot.stale=false;
+            updateGLSButtonState(sid);
             const remaining=Math.max(0,MIN_BUSY_MS-(performance.now()-start));
-            setTimeout(()=>{ if(btn) btn.classList.remove('busy'); },remaining);
+            setTimeout(()=>{
+                const currentBtn=el(`glsComputeBtn_${sid}`);
+                if(currentBtn) currentBtn.classList.remove('busy');
+            },remaining);
         }
     },30);
 }
@@ -1115,10 +1136,27 @@ function _registerGLSListeners(sid){
     slot._afterplotBound=true;
 }
 
+function updateGLSButtonState(sid){
+    const btn=el(`glsComputeBtn_${sid}`);
+    if(!btn) return;
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls');
+    if(!slot) return;
+    btn.classList.toggle('current', !slot.stale);
+}
+
 function updateAllPanels(){
     datasets.forEach(ds=>updateStatsBar(ds.id));
     el('rvModelCallCount').textContent=rvModelCallCount.toLocaleString();
-    panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else updateGLSSlot(p.sid); });
+    panels.forEach(p=>{ if(p.type==='plot') updatePlotSlot(p.sid); else {
+            if(p.autoUpdate !== false) {
+                p.stale = false; // Mark as current immediately
+                updateGLSSlot(p.sid);
+            } else {
+                p.stale = true;
+            }
+        }
+    });
+    panels.filter(p=>p.type==='gls').forEach(p=>updateGLSButtonState(p.sid));
     renderAllDatasetsSummary();
 }
 
