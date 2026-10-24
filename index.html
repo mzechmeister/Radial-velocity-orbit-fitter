@@ -523,10 +523,10 @@
 <script>
 'use strict';
 const MSUN=1.989e30,MJUP=1.898e27,MEAR=5.972e24,AU=1.496e11,G=6.674e-11,DAY=86400;
-const PALETTE       =['#4cc9f0','#ff9f1c','#a0ff78','#f72585','#b5838d','#80ffdb'];
+const PALETTE       =['#4cc9f0','#ff9f1c','#06d6a0','#ffd166','#118ab2','#ef476f'];
 const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down','cross','x','star'];
 const SYMBOLS_UNICODE=['●','■','◆','▲','▼','✚','✖','★'];
-const PLANET_COLORS =['#f72585','#a0ff78','#ffbe0b','#80ffdb','#b5838d','#ff9f1c'];
+const PLANET_COLORS =['#f72585','#7209b7','#a0ff78','#ffbe0b','#80ffdb','#fb5607'];
 const PLANET_LETTERS='bcdefghijklmnopqrstuvwxyz';
 
 const PT_DEFS=[
@@ -596,7 +596,11 @@ function xAxisLabel(slot){
     if(bjd0) return `BJD − ${bjd0} [days]`;
     return 'Time <i>t</i> [days]';
 }
-
+function yAxisLabel(slot){
+    const KU=getKUnit();
+    if(slot.foldPid!==null){ const pl=planets.find(p=>p.pid===slot.foldPid); return `RV (${pl?.name||''}) [${KU}]`; }
+    return `RV [${KU}]`;
+}
 function makePlotBase(){
     const C=plotColours(),fontCol=isDark()?'#eee':'#1a1a2e';
     const minor={ticks:'inside',ticklen:3,tickcolor:C.grid};
@@ -1017,7 +1021,7 @@ function updatePlotSlot(sid){
     if(resDiv)  resDiv.style.display =slot.showRes?'':'none';
     Plotly.react(`plotRV_${sid}`,trRV,{...base,margin:{l:ML,r:MR,t:15,b:slot.showRes?5:50},
         xaxis:slot.showRes?{...axBase,...xAxExtra,title:'',showticklabels:false,type:xAxisType}:{...axBase,...xAxExtra,title:xLbl,type:xAxisType},
-        yaxis:{...axBase,tickformat:'~r',title:`RV [${getKUnit()}]`},
+        yaxis:{...axBase,tickformat:'~r',title:yAxisLabel(slot)},
         legend:{x:.01,y:.99,xanchor:'left',yanchor:'top',bgcolor:C.legendBg,bordercolor:C.grid,borderwidth:1}},
         {responsive:true,displayModeBar:'hover'});
     if(slot.showRes){
@@ -2379,12 +2383,20 @@ function makeScatterTrace(xD,yD,errsD,lineNums,name,marker,KU,opts={}){
 }
 
 function buildTraces(p,foldPid,P,slot){
+    // Neutral, theme-aware colour used for the summed "Orbit" curve when multiple
+    // planet signals are combined, so it never clashes with an individual planet colour.
+    const fontCol=isDark()?'#eee':'#1a1a2e';
     const trRV=[],trRes=[],dd=buildDatasetsData();
     const colorByTime=slot.colorByTime,showClipped=slot.showClipped;
     const clippedStyle=slot.clippedStyle,showDate=slot.showAsDate;
     const plotUnit=getKUnit(),gamRef=getGammaRefMs(),bjd0=getGlobalBJD0(),fold=foldPid!==null,KU=plotUnit;
     if(!dd.length){
-        if(planets.some(pl=>pl.active!==false)){ const ta=Array.from({length:500},(_,i)=>i/500*(P||10)*2); trRV.push({x:showDate?ta.map(t=>jdToIso(t+bjd0)):ta,y:ta.map(t=>fromMs(rvModelP(t,p,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2}}); }
+        const activePlAll=planets.filter(pl=>pl.active!==false);
+        if(activePlAll.length){
+            const ta=Array.from({length:500},(_,i)=>i/500*(P||10)*2);
+            const orbitColor=activePlAll.length===1?activePlAll[0].color:fontCol;
+            trRV.push({x:showDate?ta.map(t=>jdToIso(t+bjd0)):ta,y:ta.map(t=>fromMs(rvModelP(t,p,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:orbitColor,width:2}});
+        }
         trRes.push({x:[0,Math.max(P||10,100)],y:[0,0],mode:'lines',type:'scatter',showlegend:false,line:{color:'#555',width:1,dash:'dash'}});
         return{trRV,trRes};
     }
@@ -2395,8 +2407,22 @@ function buildTraces(p,foldPid,P,slot){
     if(activePlanets.length>0){
         const xC=Array.from({length:600},(_,i)=>fold?i/600*P:xMn+(xMx-xMn)*i/600);
         const xCplot=showDate&&!fold?xC.map(t=>jdToIso(t+bjd0)):xC;
-        if(fold){ const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef; const orbitVisible=slot.orbitVisibility['Orbit']??true; trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`Orbit (${planets.find(p=>p.pid===foldPid)?.name||''})`,line:{color:'#f72585',width:2},visible:orbitVisible}); }
-        else{ const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef; const orbitVisible=slot.orbitVisibility['Orbit']??true; trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:'#f72585',width:2},visible:orbitVisible}); if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); const planetVisible=slot.orbitVisibility[pl.name]??'legendonly'; trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:planetVisible,line:{color:col,width:1.5,dash:'dot'}}); }); } }
+        if(fold){
+            const foldPl=planets.find(pl=>pl.pid===foldPid);
+            const pFold=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pFold[i*5+1]=0; }); pFold[gammaOffset()]=gamRef;
+            const orbitVisible=slot.orbitVisibility['Orbit']??true;
+            // Legend shows the planet name and its period; line colour matches the planet's own colour.
+            trRV.push({x:xC,y:xC.map(x=>fromMs(rvModelP(x,pFold,0),plotUnit)),mode:'lines',type:'scatter',name:`${foldPl?.name||''}  (P = ${fmtSig3(P)} d)`,line:{color:foldPl?.color||'#f72585',width:2},visible:orbitVisible});
+        }
+        else{
+            const pOrbit=[...p]; pOrbit[gammaOffset()]=gamRef;
+            const orbitVisible=slot.orbitVisibility['Orbit']??true;
+            // Single active planet: sum curve equals that planet's own signal -> reuse its colour.
+            // Multiple active planets: sum curve gets a neutral colour to avoid clashing with any planet colour.
+            const orbitColor=activePlanets.length===1?activePlanets[0].color:fontCol;
+            trRV.push({x:xCplot,y:xC.map(x=>fromMs(rvModelP(x,pOrbit,0),plotUnit)),mode:'lines',type:'scatter',name:'Orbit',line:{color:orbitColor,width:2},visible:orbitVisible});
+            if(activePlanets.length>1){ activePlanets.forEach(pl=>{ const i=planetIndex(pl.pid),col=pl.color; const y=xC.map(x=>fromMs(keplerianRV(x,p[i*5],p[i*5+1],p[i*5+2],p[i*5+3],p[i*5+4]),plotUnit)); const planetVisible=slot.orbitVisibility[pl.name]??'legendonly'; trRV.push({x:xCplot,y,mode:'lines',type:'scatter',name:pl.name,visible:planetVisible,line:{color:col,width:1.5,dash:'dot'}}); }); }
+        }
     }
     const tMinG=Math.min(...allTsRaw),tMaxG=Math.max(...allTsRaw);
     const pOrbitRef=[...p]; pOrbitRef[gammaOffset()]=gamRef;
