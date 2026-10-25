@@ -390,6 +390,7 @@
     <div class="project-btns">
         <button class="btn-save"   id="btnSave"  >💾 Save</button>
         <button class="btn-saveas" id="btnSaveAs" >💾 As</button>
+        <button class="btn-saveas" id="btnFork" title="Open a copy of this project in a new tab">🗗 Duplicate</button>
     </div>
 
     <button class="btn-view active" id="btnSidebar">⊲ Normal</button>
@@ -2669,6 +2670,19 @@ function saveProject(saveAs){
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
     showMsg(`✅ Saved as "${filename}"`,true);
 }
+// Opens an independent copy of the current project (data + all settings) in a new tab,
+// using localStorage as a short-lived handoff channel between the two tabs.
+function forkToNewTab(){
+    const proj=buildProjectJSON();
+    proj.projectName=(proj.projectName||'untitled')+' (fork)';
+    const key='rvfitter_fork_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    try{ localStorage.setItem(key,JSON.stringify(proj)); }
+    catch(e){ showMsg('❌ Could not duplicate: project too large for browser storage.',false); return; }
+    const url=new URL(location.href);
+    url.search=''; url.hash=''; url.searchParams.set('fork',key);
+    window.open(url.toString(),'_blank');
+    showMsg('🗗 Opened a duplicate in a new tab.',true);
+}
 function loadProject(event){
     const file=event.target.files[0]; if(!file) return;
     const r=new FileReader();
@@ -2773,6 +2787,7 @@ function initStaticEvents(){
     el('btnNew').addEventListener('click',newProject);
     el('btnSave').addEventListener('click',()=>saveProject(false));
     el('btnSaveAs').addEventListener('click',()=>saveProject(true));
+    el('btnFork').addEventListener('click',forkToNewTab);
     el('btnOpen').addEventListener('click',()=>el('projectFileInput').click());
     el('projectFileInput').addEventListener('change',loadProject);
     el('btnTheme').addEventListener('click',toggleTheme);
@@ -2815,8 +2830,21 @@ function initStaticEvents(){
 window.onload=()=>{
     updateScrollbarWidth();
     initStaticEvents();
-    const restored=restoreFromSession();
-    if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); }
+    // If opened as a duplicate (see forkToNewTab), load the handed-off project once and clean up.
+    const forkKey=new URLSearchParams(location.search).get('fork');
+    let loadedFromFork=false;
+    if(forkKey){
+        const raw=localStorage.getItem(forkKey);
+        if(raw){
+            try{ loadProjectFromObj(JSON.parse(raw)); loadedFromFork=true; }catch(e){}
+            localStorage.removeItem(forkKey);
+        }
+        history.replaceState(null,'',location.pathname); // strip ?fork=... so reload won't retry
+    }
+    if(!loadedFromFork){
+        const restored=restoreFromSession();
+        if(!restored){ addPlanet(); addDataset(); addPanel('plot'); addPanel('gls'); }
+    }
     setPlanetView(_planetView);
     updateDerived(); updateWindowTitle();
     renderAllDatasetsSummary();
