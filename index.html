@@ -219,6 +219,7 @@
         .planet-body { display:flex; flex-direction:column; gap:6px; }
         .planet-ctrl { background:none; border:none; cursor:pointer; color:var(--text2); opacity:.6; font-size:14px; padding:0 2px; flex:0 0 auto; transition:opacity .15s; }
         .planet-ctrl:hover { opacity:1; } .planet-ctrl.del:hover { color:#f72585; }
+        .pl-suggested-lamp { margin-left:4px; font-size:11px; cursor:help; }
         .gamma-sigma { font-size:12px; color:var(--text2); font-family:monospace; }
         .inst-table { width:100%; border-collapse:collapse; }
         .inst-table th { text-align:right; padding:2px 6px 4px 6px; color:var(--accent); font-weight:normal; border-bottom:1px solid var(--border); font-size:12px; }
@@ -1307,6 +1308,21 @@ function renderGLSSlot(sid){
     _registerGLSListeners(sid);
 }
 
+// After the periodogram is computed, any still-untouched placeholder planet (created with
+// no explicit period and no earlier GLS peak available) gets its period replaced by the
+// current best peak and is deactivated, becoming an unconfirmed "suggestion" (💡 lamp icon).
+function applyGLSSuggestionsToPlaceholders(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot||!slot._cache||slot._cache.peakIdx==null) return;
+    const period=slot._cache.periods[slot._cache.peakIdx];
+    let changed=false;
+    planets.forEach(pl=>{
+        if(!pl.isPlaceholder) return;
+        pl.P=period; pl.active=false; pl.suggested=true; pl.isPlaceholder=false;
+        syncPlanetToDOM(pl); changed=true;
+    });
+    if(changed){ rebuildPlanetTabs(); if(_planetView==='table') buildPlanetTable(); rebuildGLSSubtractRows(); rebuildFoldSelects(); }
+}
+
 function updateGLSSlot(sid){
     const btn=el(`glsComputeBtn_${sid}`);
     if(btn?.classList.contains('busy')) return;
@@ -1314,7 +1330,7 @@ function updateGLSSlot(sid){
     const MIN_BUSY_MS=350;
     const start=performance.now();
     setTimeout(()=>{
-        try{ computeGLSData(sid); renderGLSSlot(sid); }
+        try{ computeGLSData(sid); applyGLSSuggestionsToPlaceholders(sid); renderGLSSlot(sid); }
         catch(e){ console.error('GLS error:', e); }
         finally{
             const slot=panels.find(p=>p.sid===sid&&p.type==='gls');
@@ -1407,9 +1423,11 @@ function newProject(){
 function onPlanetActiveToggle(pid){
     const pl=planets.find(p=>p.pid===pid); if(!pl) return;
     pl.active=getChecked(`pActive_${pid}`);
+    pl.suggested=false; // user explicitly decided -> no longer an unconfirmed suggestion
     el(`planetBlock_${pid}`)?.classList.toggle('inactive',!pl.active);
     el(`pBody_${pid}`)?.querySelectorAll('input,select').forEach(e=>e.disabled=!pl.active);
-    _updatePlanetTabDot(pid);
+    // Rebuild tabs/table so the 💡 suggestion lamp (if any) disappears now that it's confirmed.
+    rebuildPlanetTabs(); if(_planetView==='table') buildPlanetTable();
     rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); refreshGLSOverlays();
 }
 
@@ -1436,7 +1454,9 @@ function buildPlanetTable(){
         const delBtn=makeEl('button',{class:'planet-ctrl del',title:'Remove',text:'×',style:{fontSize:'11px',padding:'0 2px'}});
         delBtn.addEventListener('click',()=>removePlanet(pl.pid));
         const head=makeEl('div',{class:'pt-head',style:{borderBottomColor:col}});
-        head.appendChild(activeCb); head.appendChild(nameInp); head.appendChild(delBtn);
+        head.appendChild(activeCb); head.appendChild(nameInp);
+        if(pl.suggested) head.appendChild(makeEl('span',{class:'pl-suggested-lamp',text:'💡',title:'Suggested period from GLS peak — activate to confirm'}));
+        head.appendChild(delBtn);
         tbl.appendChild(head);
     });
     PT_DEFS.forEach(({key,step,min,max})=>{
@@ -1542,6 +1562,7 @@ function rebuildPlanetTabs(){
         const tab=makeEl('div',{class:'planet-tab'+(isActive?' active':''),id:`ptab_${pl.pid}`,style:{'--planet-col':col,color:isActive?col:'var(--text2)'}});
         tab.appendChild(makeEl('span',{text:'●',style:{color:col,fontSize:'10px',opacity:pl.active===false?'.35':'1'}}));
         attachTabLabel(tab,pl.name,{onRename:n=>onPlanetRename(pl.pid,n)});
+        if(pl.suggested) tab.appendChild(makeEl('span',{class:'pl-suggested-lamp',text:'💡',title:'Suggested period from GLS peak — activate to confirm'}));
         attachTabCloseButton(tab,()=>removePlanet(pl.pid));
         tab.addEventListener('click',()=>switchPlanetTab(pl.pid));
         setupGenericDrag(tab,pl.pid,'planet-tab','tab-drag-over',()=>dragPlanetPid,v=>{dragPlanetPid=v;},_swapPlanets);
@@ -1645,6 +1666,23 @@ function _buildPlanetBlock(pl,col,KU){
 }
 
 function addPlanet(opts={}){
+    // If there's still an unconfirmed GLS suggestion (💡 lamp) and this is a plain "+" click
+    // (not loading a saved project, which passes an explicit pid), confirm/activate that
+    // suggestion instead of creating a redundant new placeholder planet.
+    if(opts.pid==null){
+        const suggestion=planets.find(p=>p.suggested);
+        if(suggestion){
+            suggestion.active=true; suggestion.suggested=false;
+            document.querySelectorAll(`[id="pActive_${suggestion.pid}"]`).forEach(cb=>cb.checked=true);
+            el(`planetBlock_${suggestion.pid}`)?.classList.remove('inactive');
+            el(`pBody_${suggestion.pid}`)?.querySelectorAll('input,select').forEach(e=>e.disabled=false);
+            rebuildPlanetTabs(); if(_planetView==='table') buildPlanetTable();
+            rebuildGLSSubtractRows(); rebuildFoldSelects(); clearErrors(); updateAllPanels(); refreshGLSOverlays();
+            switchPlanetTab(suggestion.pid);
+            showMsg(`✅ Confirmed suggested planet ${suggestion.name} (P = ${suggestion.P.toFixed(4)} d).`,true);
+            return suggestion;
+        }
+    }
     const pid=nextPlanetId++,i=planets.length,col=opts.color||planetColor(i),KU=getKUnit();
     const bjd0=getGlobalBJD0();
     const allTs=datasets.flatMap(ds => (ds.rawRows||[]).map(r => r.t + getDsT0Ref(ds) - bjd0));
@@ -1665,8 +1703,11 @@ function addPlanet(opts={}){
         t0: opts.t0 ?? (glsPeriod ? wrapTo(tMean, glsPeriod) : tMean),
         fitP:opts.fitP??true,fitK:opts.fitK??true,fitE:opts.fitE??true,
         fitOmega:opts.fitOmega??true,fitT0:opts.fitT0??true,
-        active:opts.active??true,glsSubtract:opts.glsSubtract??true,color:col};
-    planets.push(pl); activePlanetPid=pid;
+        active:opts.active??true,glsSubtract:opts.glsSubtract??true,color:col,
+        // Marks a freshly-created planet with no real guidance for P (no explicit value,
+        // no GLS peak yet available) — such a planet is a pure placeholder (e.g. P=5),
+        // eligible for automatic replacement by the first real GLS peak once data arrives.
+        isPlaceholder:opts.isPlaceholder??(opts.P==null&&glsPeriod==null),suggested:opts.suggested??false};    planets.push(pl); activePlanetPid=pid;
     _buildPlanetBlock(pl,col,KU);
     rebuildPlanetTabs(); switchPlanetTab(pid);
     if(_planetView==='table') buildPlanetTable();
