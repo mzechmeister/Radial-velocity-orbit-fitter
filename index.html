@@ -816,7 +816,7 @@ function _glsHandleCurveClick(sid,period){
 function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set(),orbitVisibility:opts.orbitVisibility??{},clipMode:opts.clipMode??false}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
-    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},autoUpdate:opts.autoUpdate??true,stale:opts.stale??true,_afterplotBound:false,_cache:null};
+    return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},autoUpdate:opts.autoUpdate??true,stale:opts.stale??true,_afterplotBound:false,_cache:null,_selectedPeriod:null,_selectedPower:null};
 }
 
 function addPanel(type,opts={}){
@@ -863,7 +863,7 @@ function _buildPlotBody(slot,body){
     optRow.appendChild(makeEl('label',{text:'Phase-fold:'}));
     optRow.appendChild(foldSel);
     function mkCb(lbl,val,fn){ const l=makeEl('label',{class:'check-item'}); const cb=makeEl('input',{type:'checkbox'}); cb.checked=val; cb.addEventListener('change',()=>{ fn(cb.checked); updatePlotSlot(sid); }); l.appendChild(cb); l.appendChild(makeEl('span',{text:' '+lbl})); return l; }
-    optRow.appendChild(mkCb('Show residuals',slot.showRes,   v=>slot.showRes=v));
+    optRow.appendChild(mkCb('Show residuals',slot.showRes,   v=>{ slot.showRes=v; slot._pointClickBound=false; }));
     optRow.appendChild(mkCb('Color by time', slot.colorByTime,v=>slot.colorByTime=v));
     optRow.appendChild(mkCb('Dates',         slot.showAsDate, v=>slot.showAsDate=v));
     optRow.appendChild(mkCb('Show clipped',  slot.showClipped,v=>slot.showClipped=v));
@@ -925,6 +925,9 @@ function _buildGLSBody(slot,body){
     svg.id=`glsOverlay_${sid}`; svg.setAttribute('style','position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible;');
     wrap.appendChild(svg); body.appendChild(wrap);
     body.appendChild(makeEl('div',{class:'gls-peak-info',id:`glsPeakInfo_${sid}`}));
+    const peakAssignRow=makeEl('div',{id:`glsPeakAssign_${sid}`});
+    peakAssignRow.style.cssText='margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text2);';
+    body.appendChild(peakAssignRow);
     if(extCb.checked) loadExtGLS();
 }
 
@@ -1036,13 +1039,13 @@ function _hideClipHoverRing(div){
     if(idx>=0) Plotly.deleteTraces(div,idx);
 }
 
-// Registers click/hover handlers (once per slot) on both the RV and residuals plot:
-// - in clip mode: click toggles clip status of the point, hover shows a red ring preview
-// - otherwise: click toggles the single global "marked" point and copies its info to clipboard
 function _attachPointClickHandler(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._pointClickBound) return;
     [`plotRV_${sid}`,`plotRes_${sid}`].forEach(pid=>{
-        const div=el(pid); if(!div) return;
+        const div=el(pid);
+        // Skip divs that Plotly hasn't initialized yet (e.g. the residuals div when
+        // "Show residuals" is off) - such plain DOM elements have no .on() method.
+        if(!div||typeof div.on!=='function') return;
         div.on('plotly_click',ev=>{
             const pt=ev.points?.[0]; if(!pt||!pt.customdata) return;
             const dsId=pt.fullData.meta; if(dsId==null) return;
@@ -1127,6 +1130,98 @@ function updatePlotSlot(sid){
     saveToSession();
 }
 
+// Simple local-maximum peak finder on the periodogram, used to offer secondary peaks
+// for quick assignment to a new or existing planet. Not scientifically rigorous.
+function findLocalPeaks(periods,power,maxPeaks=8,minSeparationFactor=1.2){
+    const candidates=[],n=power.length;
+    for(let i=0;i<n;i++){
+        const left=i>0?power[i-1]:-Infinity,right=i<n-1?power[i+1]:-Infinity;
+        if(power[i]>=left&&power[i]>=right&&(power[i]>left||power[i]>right)) candidates.push({idx:i,period:periods[i],power:power[i]});
+    }
+    candidates.sort((a,b)=>b.power-a.power);
+    const peaks=[];
+    for(const c of candidates){
+        if(peaks.some(p=>Math.abs(Math.log(p.period/c.period))<Math.log(minSeparationFactor))) continue;
+        peaks.push(c);
+        if(peaks.length>=maxPeaks) break;
+    }
+    return peaks;
+}
+function findNearestPeak(peaks,period){
+    if(!peaks||!peaks.length) return null;
+    let best=peaks[0],bestDist=Math.abs(Math.log(peaks[0].period/period));
+    for(const pk of peaks){ const d=Math.abs(Math.log(pk.period/period)); if(d<bestDist){ bestDist=d; best=pk; } }
+    return best;
+}
+function buildOtherPeaksTrace(cache,xFreq){
+    if(!cache||!cache.peaks||!cache.peaks.length) return null;
+    const mainPeriod=cache.peakIdx!=null?cache.periods[cache.peakIdx]:null;
+    const others=cache.peaks.filter(pk=>mainPeriod==null||Math.abs(Math.log(pk.period/mainPeriod))>1e-6);
+    if(!others.length) return null;
+    return{
+        x:others.map(pk=>xFreq?1/pk.period:pk.period),
+        y:others.map(pk=>pk.power),
+        mode:'markers',type:'scatter',name:'Other peaks',showlegend:false,meta:'otherPeaks',
+        customdata:others.map(pk=>pk.period),
+        marker:{symbol:'circle-open',size:11,color:'#ffbe0b',line:{width:2}},
+        hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`
+    };
+}
+function applyPeakToTarget(targetVal,period){
+    if(targetVal==='new'){
+        addPlanet({P:period});
+        showMsg(`✅ Added new planet with P = ${period.toFixed(4)} d`,true);
+    } else {
+        const pl=planets.find(p=>p.pid===parseInt(targetVal));
+        if(!pl) return;
+        pl.P=period; syncPlanetToDOM(pl);
+        showMsg(`✅ Period of ${pl.name} set to ${period.toFixed(4)} d`,true);
+    }
+    updateAllPanels(); refreshGLSOverlays();
+}
+function setGLSSelectedPeriod(sid,period,power){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    slot._selectedPeriod=period; slot._selectedPower=power;
+    renderGLSSlot(sid);
+}
+// Target-selection UI: with few planets, direct buttons are faster than a dropdown;
+// with many planets a dropdown keeps the row compact.
+const GLS_DIRECT_BUTTON_THRESHOLD=4;
+function renderGLSSelectionRow(sid){
+    const container=el(`glsPeakAssign_${sid}`); if(!container) return;
+    container.innerHTML='';
+    const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
+    const hasSel=slot._selectedPeriod!=null;
+    container.appendChild(makeEl('span',{text:hasSel?`Selected: P = ${slot._selectedPeriod.toFixed(4)} d`:'Click the curve or a peak marker to select a period.'}));
+    const mkBtn=(label,onClick,color)=>{
+        const btn=makeEl('button',{text:label,
+            style:{padding:'3px 10px',fontSize:'12px',borderRadius:'4px',border:`1px solid ${color}`,
+                background:'none',color:color,
+                cursor:hasSel?'pointer':'not-allowed',opacity:hasSel?'1':'.4'}});
+        btn.disabled=!hasSel;
+        btn.addEventListener('click',onClick);
+        return btn;
+    };
+    container.appendChild(mkBtn('+ Add planet',()=>applyPeakToTarget('new',slot._selectedPeriod),'var(--accent2)'));
+    if(planets.length>0){
+        container.appendChild(makeEl('span',{text:'→'}));
+        if(planets.length<=GLS_DIRECT_BUTTON_THRESHOLD){
+            planets.forEach(pl=>container.appendChild(mkBtn(pl.name,()=>applyPeakToTarget(String(pl.pid),slot._selectedPeriod),pl.color)));
+        } else {
+            const replaceSel=makeEl('select',{style:{fontSize:'12px',padding:'3px 6px',opacity:hasSel?'1':'.4',cursor:hasSel?'pointer':'not-allowed'}});
+            replaceSel.appendChild(makeEl('option',{value:'',text:'Replace period of…'}));
+            planets.forEach(pl=>replaceSel.appendChild(makeEl('option',{value:String(pl.pid),text:pl.name})));
+            replaceSel.disabled=!hasSel;
+            replaceSel.addEventListener('change',()=>{
+                if(!replaceSel.value) return;
+                applyPeakToTarget(replaceSel.value,slot._selectedPeriod);
+                replaceSel.value='';
+            });
+            container.appendChild(replaceSel);
+        }
+    }
+}
+
 function computeGLSData(sid){
     const slot=panels.find(p=>p.sid===sid&&p.type==='gls'); if(!slot) return;
     const dd=buildDatasetsData(),p=getFullParamVector();
@@ -1159,7 +1254,7 @@ function computeGLSData(sid){
     }
     let peakIdx=0,peakPow=0;
     for(let i=0;i<power.length;i++) if(power[i]>peakPow){ peakPow=power[i]; peakIdx=i; }
-    slot._cache={periods,power,freqs,useExt,pMin,pMax,peakIdx};
+    slot._cache={periods,power,freqs,useExt,pMin,pMax,peakIdx,peaks:findLocalPeaks(periods,power)};
 }
 
 function renderGLSSlot(sid){
@@ -1171,8 +1266,10 @@ function renderGLSSlot(sid){
     const xAxisType=slot.xAxis==='logperiod'?'log':'linear';
     const plotDiv=el(`plotGLS_${sid}`);
     if(!slot._cache){
-        Plotly.react(plotDiv,[],{...base,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
-        el(`glsPeakInfo_${sid}`).textContent='No data.'; _registerGLSListeners(sid); return;
+        Plotly.react(plotDiv,[],{...base,uirevision:sid,margin:{l:65,r:20,t:15,b:50},xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},yaxis:{...axBase,tickformat:'~r',title:'GLS Power'}},{responsive:true,displayModeBar:'hover'});
+        el(`glsPeakInfo_${sid}`).textContent='No data.';
+        renderGLSSelectionRow(sid);
+        _registerGLSListeners(sid); return;
     }
     const{periods,power,freqs,useExt,pMin,pMax,peakIdx}=slot._cache;
     const fMin=1/pMax,fMax=1/pMin;
@@ -1184,15 +1281,29 @@ function renderGLSSlot(sid){
     const fapLevels=[0.1,0.01,0.001],fapColors=['#ffbe0b','#f72585','#a0ff78'];
     const traces=[{x:xData,y:power,mode:'lines',type:'scatter',name:useExt?'GLS (mzechmeister)':'GLS Power',line:{color:'#4cc9f0',width:1.5}}];
     fapLevels.forEach((fap,i)=>{ const pw=1-Math.pow(1-fap,1/power.length); traces.push({x:[xL,xR],y:[pw,pw],mode:'lines',type:'scatter',name:`FAP ${(fap*100).toFixed(1)}%`,line:{color:fapColors[i],width:1,dash:'dot'}}); });
+    const otherPeaksTrace=buildOtherPeaksTrace(slot._cache,xFreq);
+    if(otherPeaksTrace) traces.push(otherPeaksTrace);
     if(peakX!=null){
-        traces.push({x:[peakX],y:[peakPow],mode:'markers',type:'scatter',name:peakLabel,marker:{symbol:'circle-open',size:16,color:pkCol,line:{color:pkCol,width:2.5}},hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`});
+        traces.push({x:[peakX],y:[peakPow],mode:'markers',type:'scatter',name:peakLabel,meta:'mainPeak',marker:{symbol:'circle-open',size:16,color:pkCol,line:{color:pkCol,width:2.5}},hovertemplate:xFreq?`<i>f</i> = %{x:.6f} d⁻¹<br>power = %{y:.4f}<extra>Peak</extra>`:`<i>P</i> = %{x:.5f} d<br>power = %{y:.4f}<extra>Peak</extra>`});
     }
-    Plotly.react(plotDiv,traces,{...base,margin:{l:65,r:20,t:15,b:50},
+    if(slot._selectedPeriod!=null){
+        const selX=xFreq?1/slot._selectedPeriod:slot._selectedPeriod;
+        let selY=slot._selectedPower;
+        if(selY==null){
+            let bestI=0,bestD=Infinity;
+            for(let i=0;i<periods.length;i++){ const d=Math.abs(Math.log(periods[i]/slot._selectedPeriod)); if(d<bestD){ bestD=d; bestI=i; } }
+            selY=power[bestI];
+        }
+        traces.push({x:[selX],y:[selY],mode:'markers',type:'scatter',name:'Selected',showlegend:false,meta:'selectedMarker',hoverinfo:'skip',
+            marker:{symbol:'cross-thin-open',size:18,color:'#ffd60a',line:{width:2.5}}});
+    }
+    Plotly.react(plotDiv,traces,{...base,uirevision:sid,margin:{l:65,r:20,t:15,b:50},
         xaxis:{...axBase,tickformat:'~r',title:xTitle,type:xAxisType},
         yaxis:{...axBase,tickformat:'~r',title:'GLS Power',range:[0,Math.min(1,peakPow*1.2)]},
         legend:{x:.99,y:.99,xanchor:'right',yanchor:'top',bgcolor:C.legendBg,bordercolor:C.grid,borderwidth:1}},
         {responsive:true,displayModeBar:'hover'});
     el(`glsPeakInfo_${sid}`).textContent=peakPeriod!=null?(xFreq?`Peak: f = ${peakFreq.toFixed(6)} d⁻¹  (P = ${peakPeriod.toFixed(5)} d,  power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`:`Peak: P = ${peakPeriod.toFixed(5)} d  (power = ${peakPow.toFixed(4)},  nfreq = ${power.length})${useExt?' [mzechmeister]':''}`):'No peak found.';
+    renderGLSSelectionRow(sid);
     _registerGLSListeners(sid);
 }
 
@@ -1224,10 +1335,19 @@ function _registerGLSListeners(sid){
     plotDiv.on('plotly_afterplot',()=>buildGLSOverlayWhenReady(sid));
     plotDiv.on('plotly_relayout',()=>buildGLSOverlay(sid));
     plotDiv.on('plotly_click',data=>{
-        const pt=data.points[0]; if(pt.curveNumber!==0) return;
-        const period=slot.xAxis==='freq'?1/pt.x:pt.x;
+        const pt=data.points[0];
+        const meta=pt.data?.meta;
+        let period;
+        if(meta==='otherPeaks') period=pt.customdata;
+        else if(meta==='mainPeak') period=slot.xAxis==='freq'?1/pt.x:pt.x;
+        else if(pt.curveNumber===0){
+            // Click on the raw power curve itself sets the marker at the exact clicked period.
+            period=slot.xAxis==='freq'?1/pt.x:pt.x;
+        }
+        else return;
         const handled=_glsHandleCurveClick(sid,period);
-        if(!handled) el(`glsPeakInfo_${sid}`).textContent=`Selected: P = ${period.toFixed(5)} d  (power = ${pt.y.toFixed(4)})  — click a period line first to assign`;
+        if(handled) return;
+        setGLSSelectedPeriod(sid,period,pt.y);
     });
     slot._afterplotBound=true;
 }
