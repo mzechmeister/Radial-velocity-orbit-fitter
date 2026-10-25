@@ -143,6 +143,7 @@
         .ds-preview-table tr:hover td { background:var(--bg3); }
         .ds-preview-table tr.clipped td { opacity:.35; text-decoration:line-through; }
         .ds-preview-table tr.comment td { color:var(--text2); opacity:.5; text-align:left; }
+        .ds-preview-table tr.marked td { background:rgba(255,214,10,0.25); }
         .ds-preview-table td.pv-linenum { color:var(--cm-gutter-fg); font-size:11px; user-select:none; }
         .ds-preview-table td.pv-cb { padding:1px 4px; }
         .ds-preview-table td.pv-date { color:var(--accent2); }
@@ -367,6 +368,10 @@
             filter: grayscale(100%);
             cursor: default;
         }
+
+        /* Clip mode: a special cursor over the plot area signals that clicking a point
+           will toggle its clipped status (works for both the RV and residuals panel). */
+        .clip-mode .nsewdrag { cursor: cell !important; }
     </style>
 </head>
 <body data-theme="dark" class="sidebar-mode">
@@ -523,6 +528,8 @@
 <script>
 'use strict';
 const MSUN=1.989e30,MJUP=1.898e27,MEAR=5.972e24,AU=1.496e11,G=6.674e-11,DAY=86400;
+// Dataset and planet colour palettes must stay disjoint, otherwise a dataset's markers
+// and a planet's orbit line can end up with the same colour by coincidence.
 const PALETTE       =['#4cc9f0','#ff9f1c','#06d6a0','#ffd166','#118ab2','#ef476f'];
 const SYMBOLS       =['circle','square','diamond','triangle-up','triangle-down','cross','x','star'];
 const SYMBOLS_UNICODE=['●','■','◆','▲','▼','✚','✖','★'];
@@ -549,6 +556,7 @@ const glsLineStates={},glsDragStates={};
 let _planetView='table';
 let panels=[],nextPanelId=1,_dragPanelSid=null;
 const _slotSyncState={};
+let markedPoint=null; // {dsId,rowIdx} - the single currently marked/highlighted data point, or null
 
 const el        =id=>document.getElementById(id);
 const getNumVal =(id,fb=0)=>parseFloat(el(id)?.value)||fb;
@@ -597,10 +605,13 @@ function xAxisLabel(slot){
     return 'Time <i>t</i> [days]';
 }
 function yAxisLabel(slot){
+    // When phase-folded, the plotted RV already has all *other* active planet signals
+    // subtracted (see buildTraces/subtractOtherPlanets), so label it accordingly.
     const KU=getKUnit();
     if(slot.foldPid!==null){ const pl=planets.find(p=>p.pid===slot.foldPid); return `RV (${pl?.name||''}) [${KU}]`; }
     return `RV [${KU}]`;
 }
+
 function makePlotBase(){
     const C=plotColours(),fontCol=isDark()?'#eee':'#1a1a2e';
     const minor={ticks:'inside',ticklen:3,tickcolor:C.grid};
@@ -800,7 +811,7 @@ function _glsHandleCurveClick(sid,period){
     updateAllPanels(); buildGLSOverlay(sid); return true;
 }
 
-function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set(),orbitVisibility:opts.orbitVisibility??{}}; }
+function defaultPlotOpts(opts={}){ return{foldPid:opts.foldPid??null,showRes:opts.showRes??true,colorByTime:opts.colorByTime??false,showAsDate:opts.showAsDate??false,showClipped:opts.showClipped??true,clippedStyle:opts.clippedStyle??'x',hiddenDatasets:new Set(),orbitVisibility:opts.orbitVisibility??{},clipMode:opts.clipMode??false}; }
 function defaultGLSOpts(opts={}){
     const last=panels.filter(p=>p.type==='gls').at(-1);
     return{pMin:opts.pMin??last?.pMin??1,pMax:opts.pMax??last?.pMax??null,ofac:opts.ofac??last?.ofac??10,xAxis:opts.xAxis??last?.xAxis??'logperiod',showPeriod:opts.showPeriod??last?.showPeriod??true,useExt:opts.useExt??last?.useExt??true,glsSubtract:opts.glsSubtract??{},autoUpdate:opts.autoUpdate??true,stale:opts.stale??true,_afterplotBound:false,_cache:null};
@@ -859,6 +870,12 @@ function _buildPlotBody(slot,body){
     clipSel.value=slot.clippedStyle;
     clipSel.addEventListener('change',()=>{ slot.clippedStyle=clipSel.value; updatePlotSlot(sid); });
     optRow.appendChild(clipSel);
+    // Clip mode toggle: while active, clicking a data point in either the RV or the
+    // residuals panel toggles its clipped status instead of marking it.
+    const clipModeBtn=makeEl('button',{class:'btn-view',id:`clipModeBtn_${sid}`,text:'✂️ Clip mode',title:'Click points to clip/un-clip them'});
+    clipModeBtn.classList.toggle('active',slot.clipMode);
+    clipModeBtn.addEventListener('click',()=>toggleClipMode(sid));
+    optRow.appendChild(clipModeBtn);
     body.appendChild(optRow);
     body.appendChild(makeEl('div',{class:'plot-rv',id:`plotRV_${sid}`}));
     body.appendChild(makeEl('div',{class:'plot-divider',id:`resDivider_${sid}`,style:{display:slot.showRes?'':'none'}}));
@@ -928,6 +945,8 @@ function removePanel(sid){
         if(state.rsL&&eRs) try{eRs.removeListener('plotly_relayout',state.rsL);}catch(e){}
         delete _slotSyncState[sid];
     }
+    // Clean up any leftover hover-ring overlay traces for this slot's plots.
+    [`plotRV_${sid}`,`plotRes_${sid}`].forEach(pid=>{ const d=el(pid); if(d) _hideClipHoverRing(d); });
     panels=panels.filter(p=>p.sid!==sid);
     el(`panelSlot_${sid}`)?.remove();
     delete glsLineStates[sid]; delete glsDragStates[sid];
@@ -976,6 +995,75 @@ function _attachLegendClickHandler(sid){
         return false;
     });
     slot._legendClickBound=true;
+}
+
+// Clip mode: toggles a visual cursor + per-point click behaviour that clips/un-clips
+// the data point under the cursor, for both the RV and the residuals panel of a slot.
+function toggleClipMode(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot) return;
+    slot.clipMode=!slot.clipMode;
+    el(`clipModeBtn_${sid}`)?.classList.toggle('active',slot.clipMode);
+    [`plotRV_${sid}`,`plotRes_${sid}`].forEach(pid=>el(pid)?.classList.toggle('clip-mode',slot.clipMode));
+    if(!slot.clipMode){ const d=el(`plotRV_${sid}`); if(d) _hideClipHoverRing(d); const d2=el(`plotRes_${sid}`); if(d2) _hideClipHoverRing(d2); }
+}
+
+// Copies a short human-readable summary of the clicked point (incl. calendar date) to clipboard.
+function copyPointInfoToClipboard(dsId,pt){
+    const ds=dsById(dsId); if(!ds) return;
+    const dateStr=pt.customdata?.[2]??'—',lineNum=pt.customdata?.[0]??'?';
+    const text=`${ds.name}\nDate: ${dateStr}\nx: ${pt.x}\ny: ${pt.y}\nline: ${lineNum}`;
+    (navigator.clipboard?.writeText(text)||Promise.reject()).then(
+        ()=>showMsg(`📋 Copied point info (${ds.name}, line ${lineNum}) to clipboard.`,true),
+        ()=>showMsg('❌ Could not copy to clipboard.',false)
+    );
+}
+
+// Adds/updates a single extra trace that draws a red open-ring marker on the hovered
+// point, previewing which point would be hit by a click while in clip mode.
+function _showClipHoverRing(div,pt){
+    if(!div?.data) return;
+    const ring={x:[pt.x],y:[pt.y],mode:'markers',type:'scatter',name:'',showlegend:false,hoverinfo:'skip',
+        marker:{symbol:'circle-open',size:(pt.marker?.size||10)+10,color:'#ff3b30',line:{width:2.5}},meta:'_clipHoverRing'};
+    const idx=div.data.findIndex(tr=>tr.meta==='_clipHoverRing');
+    if(idx>=0) Plotly.restyle(div,{x:[ring.x],y:[ring.y],marker:[ring.marker]},[idx]);
+    else Plotly.addTraces(div,ring);
+}
+function _hideClipHoverRing(div){
+    if(!div?.data) return;
+    const idx=div.data.findIndex(tr=>tr.meta==='_clipHoverRing');
+    if(idx>=0) Plotly.deleteTraces(div,idx);
+}
+
+// Registers click/hover handlers (once per slot) on both the RV and residuals plot:
+// - in clip mode: click toggles clip status of the point, hover shows a red ring preview
+// - otherwise: click toggles the single global "marked" point and copies its info to clipboard
+function _attachPointClickHandler(sid){
+    const slot=panels.find(p=>p.sid===sid&&p.type==='plot'); if(!slot||slot._pointClickBound) return;
+    [`plotRV_${sid}`,`plotRes_${sid}`].forEach(pid=>{
+        const div=el(pid); if(!div) return;
+        div.on('plotly_click',ev=>{
+            const pt=ev.points?.[0]; if(!pt||!pt.customdata) return;
+            const dsId=pt.fullData.meta; if(dsId==null) return;
+            const rowIdx=pt.customdata[1];
+            if(slot.clipMode){
+                const cb=el(`clip_${dsId}_${rowIdx}`); if(!cb) return;
+                cb.checked=!cb.checked;
+                if(!getChecked(`clipEnabled_${dsId}`,false)) el(`clipEnabled_${dsId}`).checked=true;
+                onClipToggle(dsId,rowIdx); buildDsPreview(dsId);
+            } else {
+                if(markedPoint&&markedPoint.dsId===dsId&&markedPoint.rowIdx===rowIdx) markedPoint=null;
+                else{ markedPoint={dsId,rowIdx}; copyPointInfoToClipboard(dsId,pt); }
+                updateAllPanelsLight(); buildDsPreview(dsId);
+            }
+        });
+        div.on('plotly_hover',ev=>{
+            if(!slot.clipMode) return;
+            const pt=ev.points?.[0]; if(!pt||!pt.customdata) return;
+            _showClipHoverRing(div,pt);
+        });
+        div.on('plotly_unhover',()=>{ if(slot.clipMode) _hideClipHoverRing(div); });
+    });
+    slot._pointClickBound=true;
 }
 
 function updatePlotSlotTitle(slot){
@@ -1032,6 +1120,8 @@ function updatePlotSlot(sid){
     }
     _attachSlotZoomSync(sid);
     _attachLegendClickHandler(sid);
+    _attachPointClickHandler(sid);
+    [`plotRV_${sid}`,`plotRes_${sid}`].forEach(pid=>el(pid)?.classList.toggle('clip-mode',!!slot.clipMode));
     saveToSession();
 }
 
@@ -1178,6 +1268,7 @@ function newProject(){
     ['dsTabs','dsPanes','planetBlocks','planetTabBar','planetTable','panelSlotsContainer'].forEach(id=>{ const e=el(id); if(e) e.innerHTML=''; });
     const instTbl=el('instTable'); if(instTbl) instTbl.innerHTML='';
     planets=[]; nextPlanetId=1; activePlanetPid=null;
+    markedPoint=null;
     Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
     Object.keys(glsDragStates).forEach(k=>delete glsDragStates[k]);
     Object.keys(_slotSyncState).forEach(k=>delete _slotSyncState[k]);
@@ -1546,7 +1637,9 @@ function buildDsPreview(id){
         return sortDir*cmp;
     });
     sorted.forEach(({lineIdx,line,isComment,dataIdx:myIdx,tAdj,tRaw,rv,err,iso})=>{
-        const tr=makeEl('tr',{class:isComment?'comment':''});
+        // Highlight the row corresponding to the currently marked point (if any).
+        const isMarked=!isComment&&markedPoint&&markedPoint.dsId===id&&markedPoint.rowIdx===myIdx;
+        const tr=makeEl('tr',{class:isComment?'comment':(isMarked?'marked':'')});
         tr.appendChild(makeEl('td',{class:'pv-linenum',text:String(lineIdx+1)}));
         if(isComment){
             tr.appendChild(makeEl('td',{class:'pv-comment-text',colSpan:String(nCols),text:line}));
@@ -1571,6 +1664,7 @@ function buildDsPreview(id){
     });
     table.appendChild(tbody);
     pv.appendChild(table);
+    if(markedPoint&&markedPoint.dsId===id){ pv.querySelector('tr.marked')?.scrollIntoView({block:'center'}); }
 }
 function sortPreview(id,key){
     const ds=dsById(id); if(!ds) return;
@@ -1675,6 +1769,7 @@ function onDsUnitChange(id){
 }
 function removeDataset(id){
     if(datasets.length<=1){ showMsg('Cannot remove the last dataset.',false); return; }
+    if(markedPoint?.dsId===id) markedPoint=null;
     const idx=dsIndex(id); el(`pane_${id}`).remove(); datasets.splice(idx,1);
     clearErrors();
     renderTabs(); switchTab(datasets[Math.min(idx,datasets.length-1)].id); rebuildGammaUI(); updateAllPanels();
@@ -1981,6 +2076,7 @@ function updateStatsBar(id){
 
 function rebuildClipTable(id){
     const ds=dsById(id); if(!ds) return; ds.rawRows=[];
+    if(markedPoint?.dsId===id) markedPoint=null; // row indices are being rebuilt, so any marked point is now invalid
     let ln=0;
     for(const line of ds.editor.getValue().trim().split('\n')){
         ln++; const l=line.trim(); if(!l||l.startsWith('#')) continue;
@@ -1999,21 +2095,21 @@ function getClippedSet(id){ const s=new Set(); dsById(id)?.rawRows.forEach((_,i)
 function parseDatasetRaw(id){
     const ds=dsById(id); if(!ds||!ds.rawRows.length) return null;
     const clippedSet=getChecked(`clipEnabled_${id}`,false)?getClippedSet(id):new Set();
-    const ts=[],rvs=[],errs=[],lineNums=[],ts_c=[],rvs_c=[],errs_c=[],lineNums_c=[];
+    const ts=[],rvs=[],errs=[],lineNums=[],rowIdx=[],ts_c=[],rvs_c=[],errs_c=[],lineNums_c=[],rowIdx_c=[];
     ds.rawRows.forEach((row,i)=>{
         const er=(!isNaN(row.er)&&row.er>=0)?row.er:0;
-        if(clippedSet.has(i)){ ts_c.push(row.t); rvs_c.push(row.rv); errs_c.push(er); lineNums_c.push(row.lineNum); }
-        else{ ts.push(row.t); rvs.push(row.rv); errs.push(er); lineNums.push(row.lineNum); }
+        if(clippedSet.has(i)){ ts_c.push(row.t); rvs_c.push(row.rv); errs_c.push(er); lineNums_c.push(row.lineNum); rowIdx_c.push(i); }
+        else{ ts.push(row.t); rvs.push(row.rv); errs.push(er); lineNums.push(row.lineNum); rowIdx.push(i); }
     });
     if(!ts.length&&!ts_c.length) return null;
-    return{ts,rvs,errs,lineNums,clipped:{ts:ts_c,rvs:rvs_c,errs:errs_c,lineNums:lineNums_c}};
+    return{ts,rvs,errs,lineNums,rowIdx,clipped:{ts:ts_c,rvs:rvs_c,errs:errs_c,lineNums:lineNums_c,rowIdx:rowIdx_c}};
 }
 function parseDatasetMs(id){
     const raw=parseDatasetRaw(id); if(!raw) return null;
     const ds=dsById(id),t0ref=getDsT0Ref(ds),bjd0=getGlobalBJD0(),unit=getDsUnit(ds);
     const adjT=arr=>arr.map(t=>t+t0ref-bjd0),convV=arr=>arr.map(v=>toMs(v,unit)),convE=arr=>arr.map(e=>toMs(e,unit));
-    return{ts:adjT(raw.ts),rvs:convV(raw.rvs),errs:convE(raw.errs),lineNums:raw.lineNums,
-        clipped:{ts:adjT(raw.clipped.ts),rvs:convV(raw.clipped.rvs),errs:convE(raw.clipped.errs),lineNums:raw.clipped.lineNums}};
+    return{ts:adjT(raw.ts),rvs:convV(raw.rvs),errs:convE(raw.errs),lineNums:raw.lineNums,rowIdx:raw.rowIdx,
+        clipped:{ts:adjT(raw.clipped.ts),rvs:convV(raw.clipped.rvs),errs:convE(raw.clipped.errs),lineNums:raw.clipped.lineNums,rowIdx:raw.clipped.rowIdx}};
 }
 function buildDatasetsData(){ return datasets.flatMap((ds,idx)=>{ if(!getChecked(`dsActive_${ds.id}`,true)) return []; const d=parseDatasetMs(ds.id); return d&&(d.ts.length||d.clipped.ts.length)?[{...d,dsIdx:idx,dsId:ds.id}]:[]; }); }
 
@@ -2375,11 +2471,19 @@ function undoFit(){ if(!undoSnapshot){ showMsg('Nothing to undo.',false); return
 function resetCallCount(){ rvModelCallCount=0; el('rvModelCallCount').textContent='0'; }
 function timeColor(t,mn,mx){ const f=mx>mn?(t-mn)/(mx-mn):0; return `rgb(${Math.round(f<.5?30+f*2*140:170+(f-.5)*2*85)},${Math.round(f<.5?20+f*2*200:220-(f-.5)*2*30)},${Math.round(f<.5?180-f*2*140:40-(f-.5)*2*10)})`; }
 
-function makeScatterTrace(xD,yD,errsD,lineNums,name,marker,KU,opts={}){
+function makeScatterTrace(xD,yD,errsD,lineNums,rowIdx,dateStrs,name,marker,KU,opts={}){
     const hasErr=errsD.some(e=>e>0);
     const eY=hasErr?{type:'data',array:errsD.map(e=>e>0?e:null),visible:true,color:marker.color,thickness:1.5,width:2}:undefined;
+    // customdata: [lineNumber, rowIndex, calendarDateString, errSuffixString, "Dataset (#line)" label]
+    // rowIndex is kept for clip/mark click handling; the rest feeds the compact hover text.
+    const errStrs=errsD.map(e=>e>0?` ± ${e.toFixed(4)}`:'');
+    const dsName=opts.dsName??name;
+    const nameLineStrs=lineNums.map(ln=>`${dsName} (#${ln})`);
+    const customdata=lineNums.map((ln,i)=>[ln,rowIdx[i],dateStrs[i],errStrs[i],nameLineStrs[i]]);
     return{x:xD,y:yD,mode:'markers',type:'scatter',name,marker,error_y:eY,opacity:marker.opacity??1,
-        customdata:lineNums,hovertemplate:`%{customdata}:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`,...opts};
+        customdata,
+        hovertemplate:`<b>%{customdata[4]}</b><br>%{customdata[2]}<br>%{y:.4f}%{customdata[3]} ${KU}<extra></extra>`,
+        ...opts};
 }
 
 function buildTraces(p,foldPid,P,slot){
@@ -2428,11 +2532,12 @@ function buildTraces(p,foldPid,P,slot){
     const pOrbitRef=[...p]; pOrbitRef[gammaOffset()]=gamRef;
     function makePFold(){ const pf=[...p]; planets.forEach((pl,i)=>{ if(pl.active===false||pl.pid!==foldPid) pf[i*5+1]=0; }); pf[gammaOffset()]=gamRef; return pf; }
     const pFoldRef=fold?makePFold():null;
-    dd.forEach(({ts,rvs,errs,dsIdx,lineNums,clipped})=>{
+    dd.forEach(({ts,rvs,errs,dsIdx,lineNums,rowIdx,clipped})=>{
         const ds=datasets[dsIdx],gammaDsMs=p[gammaOffset()+dsIdx]||0,shift=gamRef-gammaDsMs;
         const col=getDsColor(ds,dsIdx),sym=getDsSymbol(ds),opacity=getDsOpacity(ds),sz=getDsSize(ds);
         const dsVisible=slot.hiddenDatasets?.has(ds.id)?'legendonly':true;
         const xD=showDate&&!fold?ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?ts.map(t=>wrapTo(t,P)):ts.slice();
+        const dateStrs=ts.map(t=>jdToIso(t+bjd0)); // always show the real calendar date in hover, regardless of x-axis mode
         const subtractOtherPlanets=(tsArr,vsArr)=>vsArr.map((v,i)=>{ let rv=v+shift; if(fold) planets.forEach((pl2,pi)=>{ if(pl2.active===false||pl2.pid===foldPid) return; rv-=fromMs(keplerianRV(tsArr[i],p[pi*5],p[pi*5+1],p[pi*5+2],p[pi*5+3],p[pi*5+4]),plotUnit); }); return fromMs(rv,plotUnit); });
         const rvsD=subtractOtherPlanets(ts,rvs),errsD=errs.map(e=>fromMs(e,plotUnit));
         const orb=ts.map(t=>fromMs(fold?rvModelP(t,pFoldRef,0):rvModelP(t,pOrbitRef,0),plotUnit));
@@ -2440,21 +2545,34 @@ function buildTraces(p,foldPid,P,slot){
         const colors=colorByTime?ts.map(t=>timeColor(t,tMinG,tMaxG)):null;
         const mc=colorByTime?{color:colors,size:sz,symbol:sym,opacity}:{color:col,size:sz,symbol:sym,opacity};
         const mrc=colorByTime?{color:colors,size:Math.max(4,sz-2),symbol:sym,opacity}:{color:col,size:Math.max(4,sz-2),symbol:sym,opacity};
-        trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,ds.name,mc,KU,{visible:dsVisible,meta:ds.id}));
-        trRes.push(makeScatterTrace(xD,res,errsD,lineNums,`Res: ${ds.name}`,mrc,KU,{showlegend:false,visible:dsVisible}));
+        trRV.push(makeScatterTrace(xD,rvsD,errsD,lineNums,rowIdx,dateStrs,ds.name,mc,KU,{visible:dsVisible,meta:ds.id}));
+        // Residual trace keeps "Res: ..." as internal legend name but hover shows the plain dataset name (no "Res:" prefix).
+        trRes.push(makeScatterTrace(xD,res,errsD,lineNums,rowIdx,dateStrs,`Res: ${ds.name}`,mrc,KU,{showlegend:false,visible:dsVisible,meta:ds.id,dsName:ds.name}));
         if(showClipped&&clipped.ts.length>0){
             const xD_c=showDate&&!fold?clipped.ts.map(t=>jdToIso(t+bjd0)):fold&&P>0?clipped.ts.map(t=>wrapTo(t,P)):clipped.ts.slice();
+            const dateStrs_c=clipped.ts.map(t=>jdToIso(t+bjd0));
             const rvsD_c=subtractOtherPlanets(clipped.ts,clipped.rvs),errsD_c=clipped.errs.map(e=>fromMs(e,plotUnit));
             const orb_c=clipped.ts.map(t=>fromMs(fold?rvModelP(t,pFoldRef,0):rvModelP(t,pOrbitRef,0),plotUnit));
             const res_c=rvsD_c.map((rv,i)=>rv-orb_c[i]);
             const mc_c={symbol:clippedStyle,color:col,size:sz,opacity:0.3,line:{width:1.5,color:col}};
-            const htc=`%{customdata} clipped:  %{x},  %{y:.4f} ${KU}<extra>%{fullData.name}</extra>`;
-            trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,`${ds.name} (clipped)`,mc_c,KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
-            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2),symbol:sym},KU),showlegend:false,hovertemplate:htc,visible:dsVisible});
+            trRV.push({...makeScatterTrace(xD_c,rvsD_c,errsD_c,clipped.lineNums,clipped.rowIdx,dateStrs_c,`${ds.name} (clipped)`,mc_c,KU,{meta:ds.id,dsName:`${ds.name} (clipped)`}),showlegend:false,visible:dsVisible});
+            trRes.push({...makeScatterTrace(xD_c,res_c,errsD_c,clipped.lineNums,clipped.rowIdx,dateStrs_c,`Res: ${ds.name} (clipped)`,{...mc_c,size:Math.max(4,sz-2),symbol:sym},KU,{meta:ds.id,dsName:`${ds.name} (clipped)`}),showlegend:false,visible:dsVisible});
         }
     });
     const xResL=showDate&&!fold?jdToIso(xMn+bjd0):xMn,xResR=showDate&&!fold?jdToIso(xMx+bjd0):xMx;
     trRes.push({x:[xResL,xResR],y:[0,0],mode:'lines',type:'scatter',showlegend:false,line:{color:'#555',width:1,dash:'dash'}});
+    // Highlight the single globally marked point, if it belongs to a dataset visible in this slot's RV panel.
+    if(markedPoint){
+        for(const tr of trRV){
+            if(tr.meta!==markedPoint.dsId||!tr.customdata) continue;
+            const idx=tr.customdata.findIndex(cd=>cd[1]===markedPoint.rowIdx);
+            if(idx>=0){
+                trRV.push({x:[tr.x[idx]],y:[tr.y[idx]],mode:'markers',type:'scatter',name:'Marked',showlegend:false,
+                    marker:{symbol:'cross-thin-open',size:22,color:'#ffd60a',line:{width:3}},hoverinfo:'skip'});
+                break;
+            }
+        }
+    }
     return{trRV,trRes};
 }
 
@@ -2535,10 +2653,10 @@ function buildProjectJSON(){
         clipEnabled:getChecked(`clipEnabled_${ds.id}`,false),
     }));
     const panelsData=panels.map(p=>{
-        if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle,orbitVisibility:p.orbitVisibility||{}};
+        if(p.type==='plot') return{type:'plot',foldPid:p.foldPid,showRes:p.showRes,colorByTime:p.colorByTime,showAsDate:p.showAsDate,showClipped:p.showClipped,clippedStyle:p.clippedStyle,orbitVisibility:p.orbitVisibility||{},clipMode:p.clipMode||false};
         return{type:'gls',pMin:p.pMin,pMax:p.pMax,ofac:p.ofac,xAxis:p.xAxis,showPeriod:p.showPeriod,useExt:p.useExt,glsSubtract:p.glsSubtract||{}};
     });
-    return{version:25,projectName:getProjectName(),KUnit:KU,planets:planetsData,
+    return{version:26,projectName:getProjectName(),KUnit:KU,planets:planetsData,
         options:{fitAlgo:el('fitAlgo').value,msiniUnit:el('msiniUnit').value,starMass:getNumVal('starMass',1),starMassSig:getNumVal('starMassSig',0),globalBJD0:getNumVal('globalBJD0'),gammaRefSrc:el('gammaRefSrc').value,gammaRefVal:getNumVal('gammaRefVal'),activePlanetPid:activePlanetPid,planetView:_planetView,sidebarMode:document.body.classList.contains('sidebar-mode'),sidebarWidth:getSidebarWidth(),panels:panelsData},
         datasets:dsData};
 }
@@ -2560,6 +2678,7 @@ function loadProjectFromObj(proj){
     if(!proj.datasets) throw new Error('Not a valid project');
     el('projectName').value=proj.projectName||'untitled'; updateWindowTitle();
     planets=[]; nextPlanetId=1; activePlanetPid=null;
+    markedPoint=null;
     el('planetBlocks').innerHTML=''; el('planetTabBar').innerHTML=''; el('planetTable').innerHTML='';
     el('panelSlotsContainer').innerHTML=''; panels=[]; nextPanelId=1;
     Object.keys(glsLineStates).forEach(k=>delete glsLineStates[k]);
@@ -2676,7 +2795,6 @@ function initStaticEvents(){
     el('starMassSig').addEventListener('change',updateDerived);
     el('msiniUnit').addEventListener('change',updateDerived);
     el('dataHeader').addEventListener('click',()=>{
-    console.log('Header click!');
     togglePanel('dataBody','dataArrow');
 });
     el('paramHeader').addEventListener('click',()=>togglePanel('paramBody','paramArrow'));
